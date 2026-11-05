@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, type ProjectSummary } from "../api/client";
 import { useProjects } from "../api/queries";
 import { basename, fmtDuration } from "../lib/format";
+import { droppedPath, pickVideo, useDesktop } from "../lib/desktop";
 import { href, navigate } from "../lib/router";
 import { LANGUAGES, useSettings, WHISPER_MODELS } from "../lib/settings";
 
@@ -13,6 +14,7 @@ export function Start() {
   const [path, setPath] = useState("");
   const [dragging, setDragging] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const desktop = useDesktop();
 
   const start = useMutation({
     mutationFn: (p: string) =>
@@ -28,10 +30,10 @@ export function Start() {
     setDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
-    // Der Browser gibt den vollständigen Pfad nicht preis, nur den Namen.
-    const withPath = file as File & { path?: string };
-    if (withPath.path) {
-      setPath(withPath.path);
+    // Der Browser gibt den vollständigen Pfad nicht preis, nur den Namen. Die Desktop-App schon.
+    const full = droppedPath(file);
+    if (full) {
+      setPath(full);
       setHint(null);
     } else {
       setPath((p) => (p.trim() ? p : file.name));
@@ -69,14 +71,31 @@ export function Start() {
               if (canStart) start.mutate(path.trim());
             }}
           >
-            <Input
-              aria-label="Pfad zur Videodatei"
-              placeholder="E:\Videos\aufnahme.mp4"
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              className="font-mono"
-              fullWidth
-            />
+            <div className="flex gap-2">
+              <Input
+                aria-label="Pfad zur Videodatei"
+                placeholder="E:\Videos\aufnahme.mp4"
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                className="font-mono"
+                fullWidth
+              />
+              {desktop && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onPress={async () => {
+                    const picked = await pickVideo();
+                    if (picked) {
+                      setPath(picked);
+                      setHint(null);
+                    }
+                  }}
+                >
+                  Datei wählen
+                </Button>
+              )}
+            </div>
             {hint && (
               <Alert status="warning">
                 <Alert.Content>

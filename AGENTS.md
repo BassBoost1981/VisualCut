@@ -76,6 +76,12 @@ Routen sind Hash-Routen (`#/review/<hash>`), darum braucht das statische Auslief
 Cut-Gründe stehen in `ui/src/lib/reasons.ts` und müssen mit `design/mockups/README.md` übereinstimmen.
 `VISUALCUT_UI_DIST` überschreibt den Pfad zum gebauten Frontend.
 
+## Desktop-App (`desktop.py`, `packaging/`)
+
+`visualcut-desktop` (bzw. `uv run python -m visualcut.desktop`) startet das Backend im selben Prozess und zeigt die UI in einem nativen Fenster (pywebview, WebView2). Im Fenster gibt es einen Knopf „Datei wählen" mit Windows-Dateidialog, und Drag-and-drop liefert den vollen Pfad.
+
+Eigenständige Exe: `packaging\build.ps1` (UI bauen, Icon, PyInstaller) schreibt `dist\VisualCut\VisualCut.exe` samt Python, Whisper, CUDA-Torch, ffmpeg, UI und NLTK-Daten, rund 5 GB, Ordner als Ganzes weitergeben. In der Exe liegen Cache und Log unter `%LOCALAPPDATA%\VisualCut`. Die Whisper-Modelle (large-v3, Alignment) lädt sie beim ersten Lauf aus dem Netz in den Hugging-Face-Cache des Nutzers. Voraussetzung auf dem Zielrechner: Windows 10/11, Nvidia-Treiber für CUDA 12.8 (sonst CPU, langsam), WebView2 (bei Windows 11 vorhanden).
+
 ## MCP-Server (`visualcut-mcp`, stdio)
 
 Dünne Schicht über denselben Kernfunktionen, offizielles `mcp`-SDK. Tools: `analyze`, `get_cuts`, `decide`, `export`, `get_transcript_path`, `semantic_instructions`, `get_transcript`, `submit_semantic`, `schema`. Große Ergebnisse kommen als Pfad (`analysis.json`, `speech.json`), nie als Inhalt. Fehler kommen als Text mit `is_error`.
