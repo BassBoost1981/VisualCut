@@ -58,3 +58,15 @@ def test_long_pause():
     assert len(cuts) == 1
     assert (cuts[0].start_word, cuts[0].end_word) == (1, 2)
     assert cuts[0].reason == CutReason.long_pause
+
+
+def test_english_fillers_only_with_language_en():
+    w = words_from("Um, so I think, uh, we should go.")
+    assert [c.start_word for c in filler_cuts(w, "en")] == [0, 4]
+    assert filler_cuts(w, "de") == []  # "um" ist im Deutschen eine Präposition
+
+
+def test_retake_far_apart_is_only_maybe():
+    w = words_from("happy birthday to you thank you so much. happy birthday to you thank you so much.", gap_after={7: 7.0})
+    cuts = retake_cuts(w)
+    assert len(cuts) == 1 and cuts[0].confidence <= 0.55

@@ -14,8 +14,12 @@ PRIMARY_MODEL = "large-v3"
 FALLBACK_MODEL = "medium"
 
 # Regelparameter
-FILLERS = {"ähm": 0.9, "äh": 0.9, "ähm,": 0.9, "hm": 0.7, "mhm": 0.7, "halt": 0.6, "quasi": 0.65, "sozusagen": 0.65}
-SENTENCE_START_FILLERS = {"also": 0.7}
+FILLERS = {
+    "de": {"ähm": 0.9, "äh": 0.9, "hm": 0.7, "mhm": 0.7, "halt": 0.6, "quasi": 0.65, "sozusagen": 0.65},
+    "en": {"um": 0.9, "uh": 0.9, "uhm": 0.9, "umm": 0.9, "erm": 0.8, "hmm": 0.6},
+}
+SENTENCE_START_FILLERS = {"de": {"also": 0.7}, "en": {}}
+RETAKE_NEAR_S = 5.0  # darüber liegende Wiederholungen sind oft Absicht (Chat vorlesen, Refrain): nur maybe
 RETAKE_MIN_WORDS = 5
 RETAKE_WINDOW_S = 15.0
 RETAKE_FUZZ = 85
@@ -199,15 +203,17 @@ def _ends_sentence(text: str) -> bool:
     return text.rstrip().endswith((".", "!", "?"))
 
 
-def filler_cuts(words: list[Word]) -> list[Cut]:
+def filler_cuts(words: list[Word], language: str = "de") -> list[Cut]:
+    lexicon = FILLERS.get(language, FILLERS["de"])
+    starters = SENTENCE_START_FILLERS.get(language, {})
     cuts: list[Cut] = []
     for i, w in enumerate(words):
         key = _norm(w.text)
-        conf = FILLERS.get(key)
-        if conf is None and key in SENTENCE_START_FILLERS:
+        conf = lexicon.get(key)
+        if conf is None and key in starters:
             at_start = i == 0 or _ends_sentence(words[i - 1].text) or (w.start - words[i - 1].end) > 0.5
             if at_start:
-                conf = SENTENCE_START_FILLERS[key]
+                conf = starters[key]
         if conf is None:
             continue
         cuts.append(Cut(
@@ -247,10 +253,15 @@ def retake_cuts(words: list[Word]) -> list[Cut]:
         length = k
         while i + length < j and j + length < n and window(i + length, j + length, 1) >= RETAKE_FUZZ:
             length += 1  # Übereinstimmung Wort für Wort verlängern
+        conf = round(0.6 + 0.3 * (score - RETAKE_FUZZ) / (100 - RETAKE_FUZZ), 2)
+        gap = words[j].start - words[i].start
+        note = f"Wiederholung ab Wort {words[j].id}: „{' '.join(w.text for w in words[j:j + length])}“"
+        if gap > RETAKE_NEAR_S:
+            conf = min(conf, 0.55)
+            note += f" (Abstand {gap:.1f} s, evtl. Absicht)"
         cuts.append(Cut(
             id=f"retake-{words[i].id}", start_word=words[i].id, end_word=words[j - 1].id, reason=CutReason.retake,
-            confidence=round(0.6 + 0.3 * (score - RETAKE_FUZZ) / (100 - RETAKE_FUZZ), 2), source=CutSource.rule,
-            note=f"Wiederholung ab Wort {words[j].id}: „{' '.join(w.text for w in words[j:j + length])}“",
+            confidence=conf, source=CutSource.rule, note=note,
         ))
         i = j
     return cuts
@@ -271,5 +282,5 @@ def long_pause_cuts(words: list[Word]) -> list[Cut]:
     return cuts
 
 
-def rule_cuts(words: list[Word]) -> list[Cut]:
-    return filler_cuts(words) + retake_cuts(words) + long_pause_cuts(words)
+def rule_cuts(words: list[Word], language: str = "de") -> list[Cut]:
+    return filler_cuts(words, language) + retake_cuts(words) + long_pause_cuts(words)
