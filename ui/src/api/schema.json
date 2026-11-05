@@ -1,0 +1,627 @@
+{
+  "$defs": {
+    "Analysis": {
+      "description": "Gesamtergebnis, entspricht analysis.json.",
+      "properties": {
+        "schema_version": {
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "media": {
+          "$ref": "#/$defs/MediaInfo"
+        },
+        "technical": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TechnicalResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "speech": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpeechResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cuts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Cut"
+          },
+          "title": "Cuts",
+          "type": "array"
+        },
+        "stages_done": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Stage"
+          },
+          "title": "Stages Done",
+          "type": "array"
+        }
+      },
+      "required": [
+        "media"
+      ],
+      "title": "Analysis",
+      "type": "object"
+    },
+    "Cut": {
+      "description": "Ein Schnittvorschlag. Vor der Fusion nur Wort-IDs, danach auch Sekunden und Frames.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "start_word": {
+          "minimum": 0,
+          "title": "Start Word",
+          "type": "integer"
+        },
+        "end_word": {
+          "minimum": 0,
+          "title": "End Word",
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/$defs/CutReason"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "source": {
+          "$ref": "#/$defs/CutSource",
+          "default": "rule"
+        },
+        "note": {
+          "default": "",
+          "title": "Note",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CutStatus",
+          "default": "open"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sekunden, nach Fusion",
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "start_frame": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Frame"
+        },
+        "end_frame": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Frame"
+        },
+        "maybe": {
+          "default": false,
+          "description": "confidence < 0.6",
+          "title": "Maybe",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "start_word",
+        "end_word",
+        "reason",
+        "confidence"
+      ],
+      "title": "Cut",
+      "type": "object"
+    },
+    "CutReason": {
+      "enum": [
+        "filler",
+        "retake",
+        "tangent",
+        "long_pause",
+        "false_start",
+        "redundant",
+        "technical"
+      ],
+      "title": "CutReason",
+      "type": "string"
+    },
+    "CutSource": {
+      "enum": [
+        "rule",
+        "llm",
+        "manual"
+      ],
+      "title": "CutSource",
+      "type": "string"
+    },
+    "CutStatus": {
+      "description": "offen / angenommen / verworfen",
+      "enum": [
+        "open",
+        "accepted",
+        "rejected"
+      ],
+      "title": "CutStatus",
+      "type": "string"
+    },
+    "Decision": {
+      "properties": {
+        "cut_id": {
+          "title": "Cut Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CutStatus"
+        },
+        "note": {
+          "default": "",
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cut_id",
+        "status"
+      ],
+      "title": "Decision",
+      "type": "object"
+    },
+    "Decisions": {
+      "description": "decisions.json: Entscheidungen der UI oder eines Agenten, von Export/CLI/MCP gelesen.",
+      "properties": {
+        "schema_version": {
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "content_hash": {
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "items": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Decision"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "content_hash"
+      ],
+      "title": "Decisions",
+      "type": "object"
+    },
+    "MediaInfo": {
+      "description": "Stufe 0: ffprobe-Metadaten des Originals.",
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "content_hash": {
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "size_bytes": {
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "duration": {
+          "description": "Sekunden",
+          "minimum": 0,
+          "title": "Duration",
+          "type": "number"
+        },
+        "fps": {
+          "description": "Nominale Framerate, bei VFR die durchschnittliche",
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "variable_framerate": {
+          "default": false,
+          "title": "Variable Framerate",
+          "type": "boolean"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "video_codec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Video Codec"
+        },
+        "audio_codec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Codec"
+        },
+        "audio_channels": {
+          "default": 0,
+          "title": "Audio Channels",
+          "type": "integer"
+        },
+        "audio_sample_rate": {
+          "default": 0,
+          "title": "Audio Sample Rate",
+          "type": "integer"
+        },
+        "has_audio": {
+          "default": false,
+          "title": "Has Audio",
+          "type": "boolean"
+        },
+        "proxy_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proxy Path"
+        },
+        "audio_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Path"
+        },
+        "frame_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "content_hash",
+        "size_bytes",
+        "duration",
+        "fps",
+        "width",
+        "height"
+      ],
+      "title": "MediaInfo",
+      "type": "object"
+    },
+    "ProgressEvent": {
+      "description": "Eine JSON-Line auf stderr bzw. eine WebSocket-Nachricht.",
+      "properties": {
+        "event": {
+          "description": "stage_start, progress, stage_done, stage_skipped, error, log",
+          "title": "Event",
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "percent": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Percent"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event"
+      ],
+      "title": "ProgressEvent",
+      "type": "object"
+    },
+    "SceneChange": {
+      "properties": {
+        "frame": {
+          "description": "Erster Frame der neuen Szene",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "time": {
+          "description": "Sekunden",
+          "minimum": 0,
+          "title": "Time",
+          "type": "number"
+        },
+        "detector": {
+          "description": "content, adaptive oder content+adaptive",
+          "title": "Detector",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "frame",
+        "time",
+        "detector"
+      ],
+      "title": "SceneChange",
+      "type": "object"
+    },
+    "SilenceInterval": {
+      "properties": {
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SilenceInterval",
+      "type": "object"
+    },
+    "SpeechResult": {
+      "description": "Stufe 2: Transkript als Wortliste plus Modellinfo.",
+      "properties": {
+        "words": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Word"
+          },
+          "title": "Words",
+          "type": "array"
+        },
+        "language": {
+          "default": "de",
+          "title": "Language",
+          "type": "string"
+        },
+        "model": {
+          "default": "",
+          "title": "Model",
+          "type": "string"
+        },
+        "device": {
+          "default": "",
+          "title": "Device",
+          "type": "string"
+        },
+        "aligned": {
+          "default": false,
+          "title": "Aligned",
+          "type": "boolean"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "title": "SpeechResult",
+      "type": "object"
+    },
+    "Stage": {
+      "enum": [
+        "ingest",
+        "technical",
+        "speech",
+        "fusion"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "TechnicalResult": {
+      "description": "Stufe 1: nur Messung, keine Interpretation.",
+      "properties": {
+        "silences": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SilenceInterval"
+          },
+          "title": "Silences",
+          "type": "array"
+        },
+        "scenes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SceneChange"
+          },
+          "title": "Scenes",
+          "type": "array"
+        },
+        "silence_threshold_db": {
+          "default": -35,
+          "title": "Silence Threshold Db",
+          "type": "number"
+        },
+        "silence_min_duration": {
+          "default": 0.15,
+          "title": "Silence Min Duration",
+          "type": "number"
+        }
+      },
+      "title": "TechnicalResult",
+      "type": "object"
+    },
+    "Word": {
+      "description": "Ein Wort aus Stufe 2. `id` ist die stabile Referenz für Cuts und das LLM.",
+      "properties": {
+        "id": {
+          "minimum": 0,
+          "title": "Id",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "speaker": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Speaker"
+        },
+        "confidence": {
+          "default": 1,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "start",
+        "end"
+      ],
+      "title": "Word",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/Analysis"
+    },
+    {
+      "$ref": "#/$defs/Decisions"
+    },
+    {
+      "$ref": "#/$defs/ProgressEvent"
+    },
+    {
+      "$ref": "#/$defs/Cut"
+    }
+  ]
+}
