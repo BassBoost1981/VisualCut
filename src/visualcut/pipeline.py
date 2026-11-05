@@ -87,7 +87,9 @@ def load_analysis(cache: ProjectCache) -> Analysis | None:
     """Analyse aus dem Cache zusammensetzen, ohne etwas neu zu berechnen."""
     if not cache.has(Stage.ingest):
         return None
-    a = Analysis(media=cache.load(Stage.ingest, MediaInfo), stages_done=[Stage.ingest])
+    from .ingest import rebase
+
+    a = Analysis(media=rebase(cache.load(Stage.ingest, MediaInfo), cache), stages_done=[Stage.ingest])
     if cache.has(Stage.technical):
         a.technical = cache.load(Stage.technical, TechnicalResult)
         a.stages_done.append(Stage.technical)

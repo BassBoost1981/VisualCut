@@ -77,11 +77,21 @@ def extract_audio(video: Path, out: Path) -> None:
     run(["ffmpeg", "-y", "-v", "error", "-i", str(video), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(out)])
 
 
+def rebase(info: MediaInfo, cache: ProjectCache) -> MediaInfo:
+    """Proxy und WAV liegen immer im Cache-Ordner; gespeicherte absolute Pfade auf den aktuellen Ort umbiegen."""
+    for attr, name in (("proxy_path", "proxy.mp4"), ("audio_path", "audio.wav")):
+        if getattr(info, attr) and cache.path(name).exists():
+            setattr(info, attr, str(cache.path(name)))
+    return info
+
+
 def ingest(video: Path, cache: ProjectCache, progress: ProgressFn | None = None, force: bool = False) -> MediaInfo:
     stage = Stage.ingest
     if cache.has(stage) and not force:
-        info = cache.load(stage, MediaInfo)
+        info = rebase(cache.load(stage, MediaInfo), cache)
+        info.path = str(video.resolve())  # anderer Laufwerksbuchstabe (USB): aktuellen Pfad merken
         if info.proxy_path and Path(info.proxy_path).exists():
+            cache.save(stage, info)
             emit(progress, "stage_skipped", stage, "Cache vorhanden")
             return info
     emit(progress, "stage_start", stage, str(video))

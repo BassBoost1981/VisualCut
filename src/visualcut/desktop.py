@@ -25,8 +25,12 @@ def bundle_dir() -> Path | None:
 
 
 def data_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    d = Path(base) / APP_NAME
+    """Portabel: in der Exe `<App-Ordner>\\data`, sonst %LOCALAPPDATA%\\VisualCut."""
+    if getattr(sys, "frozen", False):
+        d = Path(sys.executable).resolve().parent / "data"
+    else:
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        d = Path(base) / APP_NAME
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -40,6 +44,11 @@ def prepare_environment() -> None:
         if ffbin.is_dir():
             os.environ["PATH"] = str(ffbin) + os.pathsep + os.environ.get("PATH", "")
         os.environ.setdefault("VISUALCUT_CACHE", str(data_dir() / "cache"))
+        # Modelle im App-Ordner (USB-portabel): Hugging Face (Whisper) und torch.hub (Alignment)
+        models = data_dir() / "models"
+        os.environ["HF_HOME"] = str(models / "huggingface")
+        os.environ["TORCH_HOME"] = str(models / "torch")
+        os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
         if (root / "nltk_data").is_dir():
             os.environ.setdefault("NLTK_DATA", str(root / "nltk_data"))
         os.chdir(data_dir())  # relative Pfade (Exporte ohne --out) landen nicht im Programmordner
