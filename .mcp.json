@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "visualcut": {
+      "command": "visualcut-mcp",
+      "args": []
+    }
+  }
+}
