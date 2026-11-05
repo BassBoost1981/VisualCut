@@ -33,6 +33,10 @@ class _Span:
     cut: Cut
     start: float
     end: float
+    word_start: float | None = None  # Grenzen des entfernten Materials laut Wortliste
+    word_end: float | None = None
+    pad_start: bool = True  # False an Grenzen, die ein Szenenwechsel gesetzt hat
+    pad_end: bool = True
 
 
 def _word_bounds(cut: Cut, by_id: dict[int, Word]) -> tuple[float, float]:
@@ -70,17 +74,29 @@ def _split_at_scenes(span: _Span, scenes: list[SceneChange]) -> list[_Span]:
     out: list[_Span] = []
     cur = span.start
     for k, t in enumerate(inside):
-        out.append(_Span(replace(span.cut, id=f"{span.cut.id}.{k}"), cur, t))
+        out.append(_Span(replace(span.cut, id=f"{span.cut.id}.{k}"), cur, t, span.word_start, span.word_end,
+                         pad_start=span.pad_start and k == 0, pad_end=False))
         cur = t
-    out.append(_Span(replace(span.cut, id=f"{span.cut.id}.{len(inside)}"), cur, span.end))
+    out.append(_Span(replace(span.cut, id=f"{span.cut.id}.{len(inside)}"), cur, span.end, span.word_start, span.word_end,
+                     pad_start=False, pad_end=span.pad_end))
     return out
 
 
 def _pad(span: _Span) -> _Span:
-    s, e = span.start + PRE_ROLL, span.end - POST_ROLL
+    """Cut nach innen schrumpfen, aber nie in das entfernte Wort hinein: Padding nutzt nur die Lücke
+    (Stille) zwischen erhaltenem und entferntem Material. Bei long_pause ist die Lücke selbst der Cut."""
+    s, e = span.start, span.end
+    if span.pad_start:
+        s = span.start + PRE_ROLL
+        if span.word_start is not None:
+            s = min(s, max(span.start, span.word_start))
+    if span.pad_end:
+        e = span.end - POST_ROLL
+        if span.word_end is not None:
+            e = max(e, min(span.end, span.word_end))
     if e - s < 0.05:  # zu kurz für Padding, Grenzen behalten
         return span
-    return _Span(span.cut, s, e)
+    return _Span(span.cut, s, e, span.word_start, span.word_end, span.pad_start, span.pad_end)
 
 
 def _clamp_to_kept_words(span: _Span, words: list[Word], removed_ids: set[int]) -> _Span:
@@ -130,6 +146,25 @@ def _merge_close(spans: list[_Span], duration: float, scenes: list[SceneChange])
     return out
 
 
+def _inside_kept(t: float, kept: list[Word]) -> bool:
+    return any(w.start < t < w.end for w in kept)
+
+
+def _quantize(start: float, end: float, fps: float, kept: list[Word]) -> tuple[int, int]:
+    """Auf Frames runden: nach außen (Cut wird eher länger), außer der Frame läge in einem erhaltenen Wort,
+    dann nach innen. So bleibt die Invariante auch nach der Rundung erhalten."""
+    import math
+
+    eps = 1e-6
+    sf = math.floor(start * fps + eps)
+    if _inside_kept(sf / fps, kept):
+        sf = math.ceil(start * fps - eps)
+    ef = math.ceil(end * fps - eps)
+    if _inside_kept(ef / fps, kept):
+        ef = math.floor(end * fps + eps)
+    return sf, ef
+
+
 def fuse(
     cuts: list[Cut], words: list[Word], silences: list[SilenceInterval], scenes: list[SceneChange],
     fps: float, duration: float = 0.0,
@@ -140,13 +175,14 @@ def fuse(
     for cut in cuts:
         if cut.start_word not in by_id or cut.end_word not in by_id:
             continue  # ungültige Wort-ID: verwerfen, nicht korrigieren
-        s, e = _word_bounds(cut, by_id)                      # Regel 1
-        if cut.reason != CutReason.long_pause or cut.start_word == cut.end_word:
+        ws, we = _word_bounds(cut, by_id)                    # Regel 1
+        is_gap = cut.reason == CutReason.long_pause and cut.start_word != cut.end_word
+        if not is_gap:
             removed_ids.update(range(cut.start_word, cut.end_word + 1))
-        s, e = snap_start(s, silences), snap_end(e, silences)  # Regel 2
+        s, e = snap_start(ws, silences), snap_end(we, silences)  # Regel 2
         if e <= s:
             continue
-        spans.append(_Span(cut, s, e))
+        spans.append(_Span(cut, s, e, None if is_gap else ws, None if is_gap else we))
 
     spans = [p for sp in spans for p in _split_at_scenes(sp, scenes)]  # Regel 3
     spans = [_pad(sp) for sp in spans]                                  # Regel 4
@@ -154,9 +190,10 @@ def fuse(
     spans = _merge_close(spans, duration, scenes)                       # Regel 5 und 6
     spans = [_clamp_to_kept_words(sp, words, removed_ids) for sp in spans]
 
+    kept = [w for w in words if w.id not in removed_ids and w.end > w.start]
     result: list[Cut] = []
     for sp in spans:
-        sf, ef = round(sp.start * fps), round(sp.end * fps)
+        sf, ef = _quantize(sp.start, sp.end, fps, kept)
         if ef <= sf:
             continue
         result.append(replace(

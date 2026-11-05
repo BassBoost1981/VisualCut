@@ -56,6 +56,18 @@ def test_no_cut_boundary_without_silences():
     assert_no_boundary_in_kept_word(cuts, words)
     c = cuts[0]
     assert words[3].end <= c.start and c.end <= words[5].start
+    # ohne Lücke gibt es nichts zu padden: das entfernte Wort wird bis auf Frame-Rundung vollständig entfernt
+    assert c.start <= words[4].start + 1 / FPS and c.end >= words[4].end - 1 / FPS
+
+
+def test_padding_only_uses_gap_between_words():
+    words = [Word(id=0, text="a", start=0.5, end=0.9), Word(id=1, text="äh", start=1.0, end=1.3),
+             Word(id=2, text="b", start=1.5, end=1.9)]
+    cuts = fuse([make_cut("f", 1, 1)], words, [], [], FPS, duration=3.0)
+    c = cuts[0]
+    # 100 ms Lücke vor "äh": Padding darf höchstens bis zum Wortanfang schrumpfen, nie hinein
+    assert words[0].end <= c.start <= words[1].start
+    assert words[1].end <= c.end <= words[2].start
 
 
 def test_long_pause_removes_gap_not_words():

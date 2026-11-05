@@ -14,3 +14,6 @@ tests/fixtures/*.wav
 out/
 *.log
 *.err
+talking.mp4
+twitch_*.mp4
+2026-*.mp4

@@ -54,7 +54,10 @@ def run_fusion(
     emit(progress, "stage_start", stage)
     raw = rule_cuts(speech.words)
     emit(progress, "progress", stage, f"{len(raw)} Regel-Kandidaten", 30)
-    cuts = fuse(raw, speech.words, technical.silences, technical.scenes, media.fps, media.duration)
+    # Nur harte Szenenwechsel (ContentDetector) zählen in der Fusion. Reine AdaptiveDetector-Treffer
+    # waren in Tests auf Einzelaufnahmen durchweg Licht- und Bewegungsflackern.
+    hard_scenes = [s for s in technical.scenes if "content" in s.detector]
+    cuts = fuse(raw, speech.words, technical.silences, hard_scenes, media.fps, media.duration)
     result = FusionResult(cuts=cuts, fps=media.fps)
     cache.save(stage, result)
     emit(progress, "stage_done", stage, f"{len(cuts)} Cuts")
