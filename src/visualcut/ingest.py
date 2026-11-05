@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from fractions import Fraction
 from pathlib import Path
@@ -15,13 +16,23 @@ class StageError(RuntimeError):
     """Eine Stufe ist fehlgeschlagen (Exit-Code 3)."""
 
 
-def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
+# Desktop-Exe ohne Konsole: ffmpeg nie von einem ungültigen stdin lesen lassen und kein Konsolenfenster öffnen
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+def tool_cmd(cmd: list[str]) -> list[str]:
+    return [cmd[0], "-nostdin", *cmd[1:]] if cmd[0] == "ffmpeg" and "-nostdin" not in cmd else cmd
+
+
+def run(cmd: list[str], check: bool = True, **kw) -> subprocess.CompletedProcess:
+    cmd = tool_cmd(cmd)
     try:
-        return subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace", **kw)
+        return subprocess.run(cmd, check=check, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              stdin=subprocess.DEVNULL, creationflags=NO_WINDOW, **kw)
     except FileNotFoundError as e:
         raise StageError(f"{cmd[0]} nicht gefunden, ist es auf dem PATH?") from e
     except subprocess.CalledProcessError as e:
-        raise StageError(f"{cmd[0]} fehlgeschlagen: {e.stderr[-2000:]}") from e
+        raise StageError(f"{cmd[0]} fehlgeschlagen (Code {e.returncode}): {(e.stderr or '')[-2000:]}") from e
 
 
 def _fps(stream: dict) -> tuple[float, bool]:
@@ -45,7 +56,7 @@ def probe(video: Path, hash_: str) -> MediaInfo:
     duration = float(data.get("format", {}).get("duration") or v.get("duration") or 0)
     nb = int(v.get("nb_frames") or 0) or round(duration * fps)
     return MediaInfo(
-        path=str(video.resolve()),
+        path=os.path.abspath(video),
         content_hash=hash_,
         size_bytes=video.stat().st_size,
         duration=duration,
@@ -89,7 +100,7 @@ def ingest(video: Path, cache: ProjectCache, progress: ProgressFn | None = None,
     stage = Stage.ingest
     if cache.has(stage) and not force:
         info = rebase(cache.load(stage, MediaInfo), cache)
-        info.path = str(video.resolve())  # anderer Laufwerksbuchstabe (USB): aktuellen Pfad merken
+        info.path = os.path.abspath(video)  # anderer Laufwerksbuchstabe (USB): aktuellen Pfad merken
         if info.proxy_path and Path(info.proxy_path).exists():
             cache.save(stage, info)
             emit(progress, "stage_skipped", stage, "Cache vorhanden")

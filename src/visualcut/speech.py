@@ -129,7 +129,7 @@ def _align(segments: list[dict], audio: Path, language: str, device: str, progre
     try:
         emit(progress, "progress", Stage.speech, "Wort-Alignment (whisperX)", 65)
         model_a, meta = whisperx.load_align_model(language_code=language, device=device)
-        wav = whisperx.load_audio(str(audio))
+        wav = _load_wav(audio)  # schon 16 kHz mono; kein zweiter ffmpeg-Aufruf über whisperX
         result = whisperx.align(
             [{"start": s["start"], "end": s["end"], "text": s["text"]} for s in segments],
             model_a, meta, wav, device, return_char_alignments=False,
@@ -137,7 +137,7 @@ def _align(segments: list[dict], audio: Path, language: str, device: str, progre
         words = [w for w in result.get("word_segments", []) if w.get("word", "").strip()]
         return words
     except Exception as e:  # noqa: BLE001
-        emit(progress, "log", Stage.speech, f"whisperX-Alignment fehlgeschlagen, nutze Whisper-Wortzeiten: {e}")
+        emit(progress, "log", Stage.speech, f"whisperX-Alignment fehlgeschlagen, nutze Whisper-Wortzeiten: {type(e).__name__}: {e}")
         return None
     finally:
         _free_gpu(model_a)

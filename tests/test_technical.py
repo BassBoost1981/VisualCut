@@ -49,3 +49,17 @@ def test_stage_skipped_on_second_run(analyzed: ProjectCache):
     media = analyzed.load(Stage.ingest, MediaInfo)
     ingest(Path(media.path), analyzed, events.append)
     assert [e.event for e in events] == ["stage_skipped"]
+
+
+def test_cache_paths_follow_moved_cache(analyzed: ProjectCache, tmp_path):
+    """USB-Stick mit anderem Laufwerksbuchstaben: Cache-Ordner verschoben, Proxy/WAV-Pfade folgen."""
+    import shutil
+
+    from visualcut.pipeline import load_analysis
+
+    moved_root = tmp_path / "anderes-laufwerk"
+    shutil.copytree(analyzed.dir, moved_root / analyzed.hash)
+    moved = ProjectCache(analyzed.hash, moved_root)
+    media = load_analysis(moved).media
+    assert media.proxy_path == str(moved.path("proxy.mp4"))
+    assert media.audio_path == str(moved.path("audio.wav"))

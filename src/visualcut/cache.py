@@ -22,7 +22,7 @@ HASH_CHUNK = 10 * 1024 * 1024
 
 
 def cache_root() -> Path:
-    return Path(os.environ.get("VISUALCUT_CACHE", ".visualcut")).resolve()
+    return Path(os.path.abspath(os.environ.get("VISUALCUT_CACHE", ".visualcut")))
 
 
 def content_hash(path: Path) -> str:

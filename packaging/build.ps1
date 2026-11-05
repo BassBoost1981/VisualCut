@@ -16,7 +16,17 @@ Pop-Location
 Write-Host "3/4 Icon"
 uv run python packaging\make_icon.py
 
-Write-Host "4/4 PyInstaller"
-uv run pyinstaller packaging\visualcut.spec --noconfirm --clean --distpath dist --workpath build\pyinstaller
+Write-Host "4/5 PyInstaller"
+# PyInstaller löscht dist\VisualCut komplett; Modelle und Analysen in data\ vorher beiseitelegen
+$data = "dist\VisualCut\data"; $keep = "build\data-keep"
+if (Test-Path $data) { New-Item -ItemType Directory -Force build | Out-Null; Move-Item $data $keep }
+try {
+    uv run pyinstaller packaging\visualcut.spec --noconfirm --clean --distpath dist --workpath build\pyinstaller
+} finally {
+    if (Test-Path $keep) { Move-Item $keep $data }
+}
+
+Write-Host "5/5 Modelle in den App-Ordner (USB-portabel, offline)"
+uv run python packaging\bundle_models.py dist\VisualCut
 
 Write-Host "Fertig: $root\dist\VisualCut\VisualCut.exe"

@@ -1,8 +1,8 @@
 """Desktop-Start: Backend im selben Prozess, UI in einem nativen Fenster (WebView2 über pywebview).
 
 Entry-Point `visualcut-desktop` und Einstieg der gebauten Exe (packaging/visualcut.spec). Im Bundle
-(PyInstaller, `sys.frozen`) liegen UI, ffmpeg und Prompts neben dem Programm; Cache und Logs gehen nach
-%LOCALAPPDATA%\\VisualCut, weil das Programmverzeichnis schreibgeschützt sein kann.
+(PyInstaller, `sys.frozen`) liegen UI, ffmpeg und Prompts neben dem Programm; Cache, Log, Fensterprofil und
+Modelle gehen nach `<App-Ordner>\\data`, damit der Ordner USB-portabel bleibt und nichts außerhalb schreibt.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def bundle_dir() -> Path | None:
 def data_dir() -> Path:
     """Portabel: in der Exe `<App-Ordner>\\data`, sonst %LOCALAPPDATA%\\VisualCut."""
     if getattr(sys, "frozen", False):
-        d = Path(sys.executable).resolve().parent / "data"
+        d = Path(os.path.abspath(sys.executable)).parent / "data"  # ohne resolve: Laufwerksbuchstabe wie gestartet
     else:
         base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
         d = Path(base) / APP_NAME
@@ -49,8 +49,17 @@ def prepare_environment() -> None:
         os.environ["HF_HOME"] = str(models / "huggingface")
         os.environ["TORCH_HOME"] = str(models / "torch")
         os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-        if (root / "nltk_data").is_dir():
-            os.environ.setdefault("NLTK_DATA", str(root / "nltk_data"))
+        # Mitgelieferte Modelle: nie ins Netz gehen, auch nicht für Versionsprüfungen
+        if (models / "huggingface" / "hub").is_dir():
+            os.environ["HF_HUB_OFFLINE"] = "1"
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"
+        nltk_dir = data_dir() / "models" / "nltk_data"  # punkt_tab für das Alignment (bundle_models.py)
+        if nltk_dir.is_dir():
+            os.environ["NLTK_DATA"] = str(nltk_dir)
+            # PyInstallers Laufzeit-Hook hat nltk schon importiert, NLTK_DATA wird dann nicht mehr gelesen
+            import nltk
+
+            nltk.data.path.insert(0, str(nltk_dir))
         os.chdir(data_dir())  # relative Pfade (Exporte ohne --out) landen nicht im Programmordner
         # Ohne Konsole sind stdout/stderr None; Fortschritt und Logs in eine Datei schreiben.
         if sys.stdout is None or sys.stderr is None:

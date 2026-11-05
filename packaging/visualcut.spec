@@ -21,11 +21,7 @@ for tool in ("ffmpeg", "ffprobe"):
         raise SystemExit(f"{tool} nicht auf dem PATH, wird für das Bundle gebraucht")
     binaries.append((exe, "ffmpeg"))
 
-# NLTK-Satzdaten für das whisperX-Alignment (sonst Download beim ersten Lauf)
-for cand in (Path.home() / "AppData" / "Roaming" / "nltk_data", Path.home() / "nltk_data"):
-    if (cand / "tokenizers").is_dir():
-        datas.append((str(cand / "tokenizers"), "nltk_data/tokenizers"))
-        break
+# NLTK-Satzdaten (punkt_tab) kopiert packaging/bundle_models.py nach data/models/nltk_data
 
 for pkg in ("faster_whisper", "ctranslate2", "whisperx", "scenedetect", "opentimelineio",
             "otio_fcpx_xml_adapter", "otio_cmx3600_adapter", "webview", "nltk"):

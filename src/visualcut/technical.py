@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
 from .cache import ProgressFn, ProjectCache, emit
-from .ingest import StageError
+from .ingest import StageError, run
 from .schema import MediaInfo, SceneChange, SilenceInterval, Stage, TechnicalResult
 
 SILENCE_DB = -35.0
@@ -15,12 +14,12 @@ SILENCE_MIN = 0.15
 
 
 def detect_silence(audio: Path, duration: float, threshold_db: float = SILENCE_DB, min_duration: float = SILENCE_MIN) -> list[SilenceInterval]:
-    proc = subprocess.run(
+    proc = run(
         ["ffmpeg", "-v", "info", "-nostats", "-i", str(audio), "-af", f"silencedetect=n={threshold_db}dB:d={min_duration}", "-f", "null", "-"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        check=False,
     )
     if proc.returncode != 0:
-        raise StageError(f"silencedetect fehlgeschlagen: {proc.stderr[-1000:]}")
+        raise StageError(f"silencedetect fehlgeschlagen (Code {proc.returncode}): {(proc.stderr or '')[-1000:]}")
     starts = [float(m) for m in re.findall(r"silence_start:\s*(-?[\d.]+)", proc.stderr)]
     ends = [float(m) for m in re.findall(r"silence_end:\s*(-?[\d.]+)", proc.stderr)]
     out: list[SilenceInterval] = []
