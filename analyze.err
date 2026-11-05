@@ -1,0 +1,8 @@
+{"event":"stage_skipped","stage":"ingest","message":"Cache vorhanden","data":{}}
+{"event":"stage_skipped","stage":"technical","message":"Cache vorhanden","data":{}}
+{"event":"stage_start","stage":"speech","message":"","data":{}}
+{"event":"progress","stage":"speech","percent":5.0,"message":"Lade large-v3 (cuda, float16)","data":{}}
+{"event":"stage_done","stage":"speech","message":"0 Wörter, Modell large-v3 auf cuda","data":{}}
+{"event":"stage_start","stage":"fusion","message":"","data":{}}
+{"event":"progress","stage":"fusion","percent":30.0,"message":"0 Regel-Kandidaten","data":{}}
+{"event":"stage_done","stage":"fusion","message":"0 Cuts","data":{}}

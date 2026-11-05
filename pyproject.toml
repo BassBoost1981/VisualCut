@@ -15,6 +15,8 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "rapidfuzz>=3.9",
+    "otio-fcpx-xml-adapter>=1.0",
+    "otio-cmx3600-adapter>=1.0",
 ]
 
 [project.optional-dependencies]

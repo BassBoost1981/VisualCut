@@ -39,8 +39,8 @@ def detect_scenes(proxy: Path, fps: float) -> list[SceneChange]:
         sm = SceneManager()
         sm.add_detector(det)
         sm.detect_scenes(video)
-        for cut in sm.get_cut_list():
-            found.setdefault(cut.get_frames(), set()).add(name)
+        for start, _end in sm.get_scene_list()[1:]:  # Szenenstart = Schnittframe, erste Szene beginnt bei 0
+            found.setdefault(start.frame_num, set()).add(name)
     return [
         SceneChange(frame=f, time=f / fps, detector="+".join(sorted(names)))
         for f, names in sorted(found.items())
