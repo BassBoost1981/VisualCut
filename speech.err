@@ -1,23 +1,0 @@
-{"event":"stage_start","stage":"ingest","message":"tests\\fixtures\\speech_de.mp4","data":{}}
-{"event":"progress","stage":"ingest","percent":10.0,"message":"Metadaten gelesen","data":{"fps":25.0,"duration":31.656825}}
-{"event":"progress","stage":"ingest","percent":70.0,"message":"Proxy erzeugt","data":{}}
-{"event":"progress","stage":"ingest","percent":95.0,"message":"Audio extrahiert","data":{}}
-{"event":"stage_done","stage":"ingest","message":"","data":{}}
-{"event":"stage_start","stage":"technical","message":"","data":{}}
-{"event":"progress","stage":"technical","percent":40.0,"message":"10 Stille-Intervalle","data":{}}
-{"event":"progress","stage":"technical","percent":95.0,"message":"0 Szenenwechsel","data":{}}
-{"event":"stage_done","stage":"technical","message":"","data":{}}
-{"event":"stage_start","stage":"speech","message":"","data":{}}
-{"event":"progress","stage":"speech","percent":5.0,"message":"Lade large-v3 (cuda, float16)","data":{}}
-{"event":"progress","stage":"speech","percent":11.219827793848562,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":20.619064767234235,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":30.01830174061991,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":40.75532290430262,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":48.643037480859185,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":57.13883578027803,"message":"Transkribiere","data":{}}
-{"event":"progress","stage":"speech","percent":65.0,"message":"Wort-Alignment (whisperX)","data":{}}
-  0%|          | 0.00/360M [00:00<?, ?B/s]  0%|          | 768k/360M [00:00<00:48, 7.77MB/s]  2%|▏         | 6.62M/360M [00:00<00:10, 34.1MB/s]  4%|▍         | 16.0M/360M [00:00<00:05, 60.9MB/s]  8%|▊         | 27.4M/360M [00:00<00:04, 82.5MB/s] 11%|█         | 38.6M/360M [00:00<00:03, 94.6MB/s] 13%|█▎        | 47.9M/360M [00:00<00:03, 94.2MB/s] 17%|█▋        | 61.5M/360M [00:00<00:02, 109MB/s]  20%|██        | 72.8M/360M [00:00<00:02, 112MB/s] 23%|██▎       | 83.5M/360M [00:00<00:02, 106MB/s] 26%|██▌       | 94.5M/360M [00:01<00:02, 108MB/s] 29%|██▉       | 106M/360M [00:01<00:02, 111MB/s]  32%|███▏      | 117M/360M [00:01<00:02, 113MB/s] 36%|███▌      | 128M/360M [00:01<00:02, 114MB/s] 39%|███▊      | 139M/360M [00:01<00:02, 112MB/s] 42%|████▏     | 152M/360M [00:01<00:01, 117MB/s] 45%|████▌     | 163M/360M [00:01<00:01, 108MB/s] 48%|████▊     | 174M/360M [00:01<00:01, 111MB/s] 51%|█████▏    | 185M/360M [00:01<00:01, 113MB/s] 55%|█████▍    | 197M/360M [00:01<00:01, 114MB/s] 58%|█████▊    | 208M/360M [00:02<00:01, 108MB/s] 61%|██████    | 219M/360M [00:02<00:01, 110MB/s] 64%|██████▍   | 230M/360M [00:02<00:01, 112MB/s] 67%|██████▋   | 241M/360M [00:02<00:01, 114MB/s] 70%|███████   | 253M/360M [00:02<00:00, 115MB/s] 73%|███████▎  | 264M/360M [00:02<00:00, 105MB/s] 77%|███████▋  | 276M/360M [00:02<00:00, 111MB/s] 80%|███████▉  | 287M/360M [00:02<00:00, 112MB/s] 83%|████████▎ | 298M/360M [00:02<00:00, 111MB/s] 86%|████████▌ | 310M/360M [00:03<00:00, 116MB/s] 89%|████████▉ | 322M/360M [00:03<00:00, 117MB/s] 92%|█████████▏| 333M/360M [00:03<00:00, 109MB/s] 96%|█████████▋| 347M/360M [00:03<00:00, 120MB/s]100%|█████████▉| 358M/360M [00:03<00:00, 109MB/s]100%|██████████| 360M/360M [00:03<00:00, 107MB/s]
-{"event":"stage_done","stage":"speech","message":"62 Wörter, Modell large-v3 auf cuda","data":{}}
-{"event":"stage_start","stage":"fusion","message":"","data":{}}
-{"event":"progress","stage":"fusion","percent":30.0,"message":"8 Regel-Kandidaten","data":{}}
-{"event":"stage_done","stage":"fusion","message":"4 Cuts","data":{}}

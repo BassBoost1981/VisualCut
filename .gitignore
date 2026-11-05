@@ -11,3 +11,6 @@ tests/fixtures/*.wav
 *.fcpxml
 *.edl
 *.otio
+out/
+*.log
+*.err
