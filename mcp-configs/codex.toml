@@ -1,0 +1,4 @@
+# Codex CLI: in ~/.codex/config.toml einfügen (oder .codex/config.toml im Projekt)
+[mcp_servers.visualcut]
+command = "visualcut-mcp"
+args = []
