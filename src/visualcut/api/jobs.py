@@ -33,7 +33,7 @@ class JobManager:
         self._lock = threading.Lock()
 
     def start(self, video: Path, upto: Stage, force: bool, whisper_model: str, language: str,
-              llm: bool = True, llm_model: str = DEFAULT_MODEL) -> Job:
+              llm: bool = True, llm_model: str = DEFAULT_MODEL, events: bool = True, vision: bool = True) -> Job:
         job = Job(id=uuid.uuid4().hex[:12], video=video, content_hash=ProjectCache.for_video(video).hash)
         self.jobs[job.id] = job
         try:
@@ -46,7 +46,8 @@ class JobManager:
 
         def work() -> None:
             try:
-                run_analysis(video, upto, force, progress, None, whisper_model, language, llm, llm_model)
+                run_analysis(video, upto, force, progress, None, whisper_model, language, llm, llm_model,
+                             events=events, vision=vision)
                 job.status = "done"
                 self._publish(job, ProgressEvent(event="job_done", message=job.id))
             except (StageError, Exception) as e:  # noqa: BLE001

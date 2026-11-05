@@ -1,4 +1,4 @@
-"""Stufe 4: Wortintervalle auf Frames snappen (PLAN.md Abschnitt 3, Stufe 4, Regeln 1 bis 6).
+"""Stufe 4: Wortintervalle auf Frames snappen (PLAN.md Abschnitt 3, Stufe 4, Regeln 1 bis 6 und 8).
 
 Interpretation der Padding-Regel: Der Cut schrumpft nach innen (80 ms Pre-Roll am Anfang,
 120 ms Post-Roll am Ende), damit vom umgebenden, erhaltenen Material nichts abgeschnitten wird.
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schema import Cut, CutReason, CutStatus, SceneChange, SilenceInterval, Word
+from .schema import Cut, CutReason, CutStatus, Event, EventEffect, EventStatus, Highlight, SceneChange, SilenceInterval, Word
 
 SNAP_WINDOW = 0.300
 PRE_ROLL = 0.080
@@ -165,9 +165,83 @@ def _quantize(start: float, end: float, fps: float, kept: list[Word]) -> tuple[i
     return sf, ef
 
 
+def _blocking(events: list[Event] | None) -> list[Event]:
+    """Regel 8 gilt für bestätigte Events, außer Schnitt-Kandidaten (Wirkung cut: dort darf geschnitten werden)."""
+    return [e for e in events or [] if e.status == EventStatus.confirmed and e.effect != EventEffect.cut]
+
+
+def _respect_events(spans: list[_Span], events: list[Event], words: list[Word], fps: float) -> list[_Span]:
+    """Regel 8: Kein Schnitt mitten in ein bestätigtes Event. Liegt der Cut ganz im Event, entfällt er; ragt er
+    hinein, endet er am Event-Start bzw. beginnt am Event-Ende, aus angeschnittenen Wörtern heraus geschoben."""
+    eps = 1.0 / fps
+    out: list[_Span] = []
+    for sp in spans:
+        s, e = sp.start, sp.end
+        hit: list[str] = []
+        dropped = False
+        for ev in events:
+            in_s = ev.start + eps < s < ev.end - eps
+            in_e = ev.start + eps < e < ev.end - eps
+            if in_s and in_e:
+                dropped = True
+                break
+            if in_e:
+                e = ev.start
+                hit.append(ev.id)
+            if in_s:
+                s = ev.end
+                hit.append(ev.id)
+        if dropped:
+            continue
+        if hit:
+            for w in words:  # Grenze nicht in einem Wort, das jetzt erhalten bleibt
+                if w.start < e < w.end:
+                    e = w.start
+                if w.start < s < w.end:
+                    s = w.end
+            if e - s <= eps:
+                continue
+            ids_in = [w.id for w in words if s <= w.start and w.end <= e]
+            cut = replace(sp.cut, note=f"{sp.cut.note} | an Event-Grenze gekürzt ({', '.join(hit)})".strip(" |"),
+                          start_word=ids_in[0] if ids_in else sp.cut.start_word,
+                          end_word=ids_in[-1] if ids_in else sp.cut.end_word)
+            sp = _Span(cut, s, e)
+        out.append(sp)
+    return out
+
+
+EVENT_LEAD = 0.500
+HIGHLIGHT_TOUCH = 1.0
+
+
+def align_highlights(highlights: list[Highlight], words: list[Word], events: list[Event] | None, fps: float,
+                     duration: float = 0.0) -> list[Highlight]:
+    """Regel 8, zweiter Teil: Highlight-Clips an bestätigten Events ausrichten. Der Clip umfasst das ganze Event
+    und beginnt 500 ms vor dem Event-Start, damit man sieht, wie es anfängt. Sekunden kommen aus Wörtern und Events."""
+    import math
+
+    by_id = {w.id: w for w in words}
+    anchors = [e for e in events or [] if e.status == EventStatus.confirmed]
+    out: list[Highlight] = []
+    for h in highlights:
+        if h.start_word not in by_id or h.end_word not in by_id:
+            continue
+        s, e = by_id[h.start_word].start, by_id[h.end_word].end
+        hit = [ev for ev in anchors if ev.start < e + HIGHLIGHT_TOUCH and ev.end > s - HIGHLIGHT_TOUCH]
+        if hit:
+            s = min(s, min(ev.start for ev in hit) - EVENT_LEAD)
+            e = max(e, max(ev.end for ev in hit))
+        s = max(0.0, s)
+        if duration > 0:
+            e = min(duration, e)
+        sf, ef = math.floor(s * fps + 1e-6), math.ceil(e * fps - 1e-6)
+        out.append(h.model_copy(update={"start": sf / fps, "end": ef / fps, "event_ids": [ev.id for ev in hit]}))
+    return out
+
+
 def fuse(
     cuts: list[Cut], words: list[Word], silences: list[SilenceInterval], scenes: list[SceneChange],
-    fps: float, duration: float = 0.0,
+    fps: float, duration: float = 0.0, events: list[Event] | None = None,
 ) -> list[Cut]:
     by_id = {w.id: w for w in words}
     removed_ids: set[int] = set()
@@ -189,6 +263,11 @@ def fuse(
     spans = [_clamp_to_kept_words(sp, words, removed_ids) for sp in spans]
     spans = _merge_close(spans, duration, scenes)                       # Regel 5 und 6
     spans = [_clamp_to_kept_words(sp, words, removed_ids) for sp in spans]
+    blocking = _blocking(events)
+    if blocking:                                                        # Regel 8
+        spans = _respect_events(spans, blocking, words, fps)
+        removed_ids = {i for i in removed_ids
+                       if any(sp.start <= by_id[i].start and by_id[i].end <= sp.end for sp in spans)}
 
     kept = [w for w in words if w.id not in removed_ids and w.end > w.start]
     result: list[Cut] = []

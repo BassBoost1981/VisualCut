@@ -149,7 +149,7 @@ def test_analyze_semantic_with_fake_client_writes_cache(tmp_path: Path):
     events: list[ProgressEvent] = []
     res = semantic.analyze_semantic(speech, cache, events.append, client=client, model="test-model")
     assert res is not None and [c.id for c in res.cuts] == ["llm-3-5"] and res.rejected == 1
-    assert res.model == "test-model" and res.prompt_version == "semantic_v1" and res.blocks == 1
+    assert res.model == "test-model" and res.prompt_version == "semantic_v2" and res.blocks == 1
     assert cache.has(Stage.semantic) and cache.load(Stage.semantic, SemanticResult).cuts[0].note == "nochmal ab 6"
     call = client.calls[0]
     assert call["model"] == "test-model" and call["output_format"] is LLMResponse
@@ -184,7 +184,7 @@ def test_pipeline_without_key_skips_semantic_and_keeps_rule_cuts(analyzed: Proje
     assert data["semantic"] is None and data["cuts"] and all(c["source"] == "rule" for c in data["cuts"])
     assert '"event":"stage_skipped","stage":"semantic"' in r.stderr.replace(" ", "")
     r = runner.invoke(cli_app, ["analyze", video, "--json", "--stage", "semantic", "--cache-dir", str(analyzed.dir.parent)])
-    assert r.exit_code == 0 and json.loads(r.stdout)["stages_done"] == ["ingest", "technical", "speech"]
+    assert r.exit_code == 0 and json.loads(r.stdout)["stages_done"] == ["ingest", "technical", "events", "speech"]
 
 
 def test_fusion_recomputes_when_llm_cuts_arrive(analyzed: ProjectCache):

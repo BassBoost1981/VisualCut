@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from .. import __version__
 from .routes_analysis import router as analysis_router
 from .routes_cuts import router as cuts_router
+from .routes_events import router as events_router
 from .routes_export import router as export_router
 from .routes_files import router as files_router
 from .routes_projects import router as projects_router
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis_router)
     app.include_router(cuts_router)
     app.include_router(export_router)
+    app.include_router(events_router)
     app.include_router(files_router)
     app.include_router(ws_router)
 

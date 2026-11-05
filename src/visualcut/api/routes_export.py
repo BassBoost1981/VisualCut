@@ -26,6 +26,7 @@ class ExportResult(BaseModel):
     format: str
     cuts_applied: int
     markers: int
+    event_markers: int = 0
     clips: int
 
 
@@ -36,11 +37,11 @@ def export(content_hash: str, body: ExportRequest) -> ExportResult:
     a = get_analysis_or_404(content_hash)
     cache = get_cache_or_404(content_hash)
     target = Path(body.out) if body.out else cache.path(f"{Path(a.media.path).stem}.{body.format}")
-    tl = export_mod.build_timeline(a.media, a.cuts, include_open=body.open_as_cut)
+    tl = export_mod.build_timeline(a.media, a.cuts, include_open=body.open_as_cut, events=a.events)
     export_mod.write(tl, target, body.format)
     to_cut, to_mark = decisions_mod.for_export(a.cuts, body.open_as_cut)
     return ExportResult(path=str(target), format=body.format, cuts_applied=len(to_cut), markers=len(to_mark),
-                        clips=len(list(tl.tracks[0])))
+                        event_markers=export_mod.count_event_markers(tl), clips=len(list(tl.tracks[0])))
 
 
 @router.get("/export/{fmt}")

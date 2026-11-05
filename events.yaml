@@ -1,0 +1,78 @@
+# VisualCut Stufe 1b: erkennbare Ereignisse (PLAN.md Abschnitt 3, Stufe 1b).
+#
+# Pro Eintrag:
+#   type          stabiler Schlüssel (a-z, 0-9, _), erscheint in events.json und im Export
+#   label         Anzeigename in UI und Marker
+#   prompt        Text für X-CLIP (Zero-Shot auf 2-Sekunden-Clips), leer = kein Bild-Prompt
+#   audio_prompt  Text für CLAP (Zero-Shot auf Audio), leer = kein Audio-Prompt
+#   kinetics      Teilstrings von Kinetics-400-Klassen, die VideoMAE als Bestätigung zählt
+#   effect        highlight (Highlight-Kandidat), marker (nur Marker) oder cut (Schnitt-Kandidat)
+#   background    true = nur Vergleichsklasse, erzeugt nie ein Event
+#   motion        true = Start und Ende aus der Pose-Bewegungsenergie verfeinern
+#
+# Pro Projekt überschreibbar: eine events.yaml im Cache-Ordner .visualcut/<hash>/ hat Vorrang.
+version: 1
+vision_budget: 40
+events:
+  - type: dancing
+    label: Tanzen
+    prompt: person dancing
+    kinetics: [danc, zumba, krumping, moon walking, tango, salsa, jumpstyle]
+    effect: highlight
+    motion: true
+  - type: talking
+    label: Spricht in die Kamera
+    prompt: person talking to camera
+    audio_prompt: a person speaking
+    background: true
+  - type: standing_up
+    label: Steht auf
+    prompt: person standing up
+    effect: marker
+    motion: true
+  - type: sitting_down
+    label: Setzt sich
+    prompt: person sitting down
+    effect: marker
+    motion: true
+  - type: walking
+    label: Geht
+    prompt: person walking
+    effect: marker
+    motion: true
+  - type: showing_object
+    label: Zeigt etwas in die Kamera
+    prompt: person holding object towards camera
+    effect: highlight
+  - type: pointing
+    label: Zeigt auf den Bildschirm
+    prompt: person pointing at screen
+    effect: marker
+  - type: drinking
+    label: Trinkt
+    prompt: person drinking
+    kinetics: [drinking]
+    effect: cut
+  - type: laughing
+    label: Lacht
+    prompt: person laughing
+    audio_prompt: people laughing out loud
+    kinetics: [laughing]
+    effect: highlight
+  - type: applause
+    label: Applaus
+    audio_prompt: applause and clapping
+    effect: highlight
+  - type: music
+    label: Musik
+    audio_prompt: music playing
+    effect: marker
+  - type: empty_frame
+    label: Niemand im Bild
+    prompt: an empty room with nobody in it
+    effect: cut
+  - type: nothing
+    label: Nichts passiert
+    prompt: nothing happening
+    audio_prompt: silence
+    background: true

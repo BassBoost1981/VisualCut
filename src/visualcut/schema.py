@@ -13,12 +13,13 @@ SCHEMA_VERSION = 1
 class Stage(StrEnum):
     ingest = "ingest"
     technical = "technical"
+    events = "events"
     speech = "speech"
     semantic = "semantic"
     fusion = "fusion"
 
 
-STAGE_ORDER: list[Stage] = [Stage.ingest, Stage.technical, Stage.speech, Stage.semantic, Stage.fusion]
+STAGE_ORDER: list[Stage] = [Stage.ingest, Stage.technical, Stage.events, Stage.speech, Stage.semantic, Stage.fusion]
 
 
 class CutReason(StrEnum):
@@ -162,6 +163,9 @@ class Highlight(BaseModel):
     end_word: int = Field(ge=0)
     score: float = Field(ge=0, le=1)
     hook: str = ""
+    start: float | None = Field(default=None, description="Sekunden, nach Fusion (an Event-Grenzen ausgerichtet)")
+    end: float | None = None
+    event_ids: list[str] = Field(default=[], description="Events, an denen der Clip ausgerichtet wurde")
 
 
 class Flag(BaseModel):
@@ -233,11 +237,129 @@ class SemanticResult(BaseModel):
     rejected: int = Field(default=0, description="Verworfene Einträge (ungültige IDs, Grenzen, Werte)")
 
 
+class EventStatus(StrEnum):
+    confirmed = "confirmed"
+    candidate = "candidate"
+
+
+class EventEffect(StrEnum):
+    """Wirkung eines Event-Typs: Highlight-Kandidat, nur Marker, oder Schnitt-Kandidat."""
+
+    highlight = "highlight"
+    marker = "marker"
+    cut = "cut"
+
+
+class EventDefinition(BaseModel):
+    """Ein Eintrag in events.yaml."""
+
+    type: str = Field(pattern=r"^[a-z][a-z0-9_]*$", description="Stabiler Schlüssel, z. B. dancing")
+    label: str = Field(description="Anzeigename")
+    prompt: str = Field(default="", description="Text für X-CLIP (Zero-Shot), leer = kein Bild-Prompt")
+    audio_prompt: str = Field(default="", description="Text für CLAP (Zero-Shot), leer = kein Audio-Prompt")
+    kinetics: list[str] = Field(default=[], description="Teilstrings von Kinetics-400-Klassen, die VideoMAE als Bestätigung zählt")
+    effect: EventEffect = EventEffect.marker
+    background: bool = Field(default=False, description="Nur Vergleichsklasse für X-CLIP/CLAP, erzeugt kein Event")
+    motion: bool = Field(default=False, description="Grenzen aus der Pose-Bewegungsenergie verfeinern")
+
+
+class EventCatalog(BaseModel):
+    """events.yaml: Liste der erkennbaren Ereignisse, pro Projekt überschreibbar."""
+
+    version: int = 1
+    vision_budget: int = Field(default=40, ge=0, description="Maximale Vision-LLM-Aufrufe pro Video (Ebene C)")
+    events: list[EventDefinition] = []
+
+    @model_validator(mode="after")
+    def _unique(self) -> EventCatalog:
+        seen: set[str] = set()
+        for d in self.events:
+            if d.type in seen:
+                raise ValueError(f"Event-Typ {d.type} doppelt")
+            seen.add(d.type)
+        return self
+
+
+class Event(BaseModel):
+    """Ein Ereignis aus Stufe 1b. Sekunden kommen aus der Erkennung, nie von einem LLM."""
+
+    id: str
+    type: str
+    label: str = ""
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+    confidence: float = Field(ge=0, le=1)
+    sources: list[str] = Field(default=[], description="pose, clap, xclip, videomae, vision, agent:<name>")
+    status: EventStatus = EventStatus.candidate
+    effect: EventEffect = EventEffect.marker
+    description: str | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> Event:
+        if self.end < self.start:
+            raise ValueError(f"event {self.id}: end < start")
+        return self
+
+
+class EventWindow(BaseModel):
+    """Ein unklares Fenster für Ebene C (Vision-LLM oder der steuernde Agent)."""
+
+    id: str
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+    candidates: list[str] = Field(default=[], description="Event-Typen, um die es geht")
+    reason: str = ""
+    frames: list[str] = Field(default=[], description="JPEG-Pfade im Cache, 4 bis 8 Frames")
+    judged_by: str | None = None
+
+
+class EventJudgment(BaseModel):
+    """Urteil zu einem Fenster: ein Typ aus events.yaml oder `none`. Keine Zeitangaben, die kommen aus dem Fenster."""
+
+    window_id: str
+    type: str
+    confidence: float = Field(ge=0, le=1)
+    description: str = ""
+
+
+class LLMEventJudgment(BaseModel):
+    """Structured Output der Vision-LLM-Antwort pro Fenster. Ohne Constraints: validiert wird im Code."""
+
+    type: str
+    confidence: float
+    description: str
+
+
+class EventJudgments(BaseModel):
+    """Einreichung von Ebene C durch den steuernden Agenten (`visualcut events --judge`)."""
+
+    source: str = "agent"
+    judgments: list[EventJudgment] = []
+
+
+class EventsResult(BaseModel):
+    """Stufe 1b, entspricht events.json."""
+
+    events: list[Event] = []
+    detections: list[Event] = Field(default=[], description="Rohdetektionen pro Quelle, vor der Fusion")
+    windows: list[EventWindow] = []
+    judgments: list[EventJudgment] = []
+    motion: list[float] = Field(default=[], description="Bewegungsenergie der Hauptperson pro Pose-Sample")
+    motion_lower: list[float] = Field(default=[], description="Unterkörperenergie pro Pose-Sample, 0 wenn nicht sichtbar")
+    motion_fps: float = 5.0
+    layers: dict[str, str] = Field(default={}, description="Ebene/Modell -> ok oder Grund fürs Überspringen")
+    vision_calls: int = 0
+    vision_budget: int = 40
+    detection_hash: str = Field(default="", description="Hash der erkennungsrelevanten Felder aus events.yaml")
+
+
 class FusionResult(BaseModel):
     cuts: list[Cut] = []
+    highlights: list[Highlight] = []
     fps: float = 25.0
     llm_model: str | None = Field(default=None, description="Modell der LLM-Cuts, die eingeflossen sind, sonst null")
     semantic_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen Stufe-3-Cuts, für den Cache")
+    events_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen Events, für den Cache")
 
 
 class Analysis(BaseModel):
@@ -246,9 +368,11 @@ class Analysis(BaseModel):
     schema_version: int = SCHEMA_VERSION
     media: MediaInfo
     technical: TechnicalResult | None = None
+    events: list[Event] = []
     speech: SpeechResult | None = None
     semantic: SemanticResult | None = None
     cuts: list[Cut] = []
+    highlights: list[Highlight] = Field(default=[], description="Highlights mit Sekunden, nach Fusion")
     stages_done: list[Stage] = []
 
 
@@ -283,5 +407,5 @@ def json_schema() -> dict[str, Any]:
     """JSON-Schema aller Ausgabeobjekte unter einem gemeinsamen $defs-Dach."""
     from pydantic import TypeAdapter
 
-    adapter = TypeAdapter(Analysis | Decisions | ProgressEvent | Cut)
+    adapter = TypeAdapter(Analysis | Decisions | ProgressEvent | Cut | EventCatalog | EventsResult | EventJudgments)
     return adapter.json_schema()

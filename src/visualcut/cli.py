@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from . import __version__, decisions as decisions_mod, export as export_mod, pipeline
 from .cache import stderr_progress
 from .ingest import StageError
-from .schema import CutStatus, SemanticSubmission, Stage, json_schema
+from .schema import CutStatus, EventJudgments, SemanticSubmission, Stage, json_schema
 from .semantic import DEFAULT_MODEL, load_prompt
 
 EXIT_OK, EXIT_INPUT, EXIT_STAGE, EXIT_CACHE = 0, 2, 3, 4
@@ -79,18 +79,24 @@ def analyze(
     whisper_model: Annotated[str, typer.Option("--whisper-model")] = "large-v3",
     language: Annotated[str, typer.Option("--language")] = "de",
     no_llm: Annotated[bool, typer.Option("--no-llm", help="Stufe 3 (Claude) überspringen, nur Regel-Cuts")] = False,
-    model: Annotated[str, typer.Option("--model", help="Claude-Modell für Stufe 3")] = DEFAULT_MODEL,
+    model: Annotated[str, typer.Option("--model", help="Claude-Modell für Stufe 3 und Ebene C von Stufe 1b")] = DEFAULT_MODEL,
+    no_events: Annotated[bool, typer.Option("--no-events", help="Stufe 1b (Ereigniserkennung) überspringen")] = False,
+    no_vision: Annotated[bool, typer.Option("--no-vision", help="Stufe 1b ohne Vision-LLM (Ebene C)")] = False,
+    vision_budget: Annotated[int | None, typer.Option("--vision-budget", help="Max. Vision-LLM-Aufrufe (Standard aus events.yaml, 40)")] = None,
     cache_dir: CacheOpt = None,
     summary: Annotated[bool, typer.Option("--summary", help="Nur Kennzahlen und Pfad statt der vollen Analyse")] = False,
 ) -> None:
-    """Alle Stufen laufen lassen (oder bis --stage). Gibt analysis.json zurück.
+    """Alle Stufen laufen lassen (oder bis --stage): ingest, technical, events, speech, semantic, fusion.
+    Gibt analysis.json zurück.
 
     Stufe 3 braucht ANTHROPIC_API_KEY; ohne Key wird sie übersprungen (stage_skipped), nicht abgebrochen.
+    Stufe 1b braucht das Extra `events` (uv sync --extra events); ohne wird sie übersprungen.
     """
 
     def go():
         analysis = pipeline.run_analysis(
             video, stage, force, stderr_progress, cache_dir, whisper_model, language, llm=not no_llm, llm_model=model,
+            events=not no_events, vision=not no_vision, vision_budget=vision_budget,
         )
         cache = pipeline.cache_for(video, cache_dir)
         out_path = cache.path("analysis.json")
@@ -163,12 +169,13 @@ def export(
             raise ValueError(f"Unbekanntes Format {format}")
         cache, analysis = pipeline.require_analysis(video, cache_dir)
         target = out or cache.path(f"{video.stem}.{format.replace('markers-edl', 'markers.edl')}")
-        tl = export_mod.build_timeline(analysis.media, analysis.cuts, include_open=open_as_cut)
+        tl = export_mod.build_timeline(analysis.media, analysis.cuts, include_open=open_as_cut, events=analysis.events)
         export_mod.write(tl, target, format)
         to_cut, to_mark = decisions_mod.for_export(analysis.cuts, open_as_cut)
         info = {"path": str(target), "format": format, "cuts_applied": len(to_cut), "markers": len(to_mark),
-                "clips": len(list(tl.tracks[0]))}
-        _out(info, json_, f"{target} ({info['clips']} Clips, {info['cuts_applied']} Cuts, {info['markers']} Marker)")
+                "event_markers": export_mod.count_event_markers(tl), "clips": len(list(tl.tracks[0]))}
+        _out(info, json_, f"{target} ({info['clips']} Clips, {info['cuts_applied']} Cuts, {info['markers']} Marker, "
+                          f"{info['event_markers']} Event-Marker)")
 
     _guard(go, json_)
 
@@ -210,7 +217,8 @@ def transcript(
             raise StageError(f"Kein Transkript im Cache, zuerst: visualcut analyze {video} --stage speech")
         text, first, last = pipeline.transcript_lines(analysis.speech, from_word, to_word)
         data = {"content_hash": cache.hash, "language": analysis.speech.language, "total_words": len(analysis.speech.words),
-                "first_word": first, "last_word": last, "lines": text}
+                "first_word": first, "last_word": last, "lines": text,
+                "events": pipeline.transcript_events(analysis, first, last)}
         _out(data, json_, text)
 
     _guard(go, json_)
@@ -222,7 +230,7 @@ def semantic(
     from_file: Annotated[Path | None, typer.Option("--from", help="JSON mit cuts/chapters/highlights/flags auf Wort-IDs")] = None,
     source: Annotated[str | None, typer.Option("--source", help="Absender, z. B. agent:claude-code")] = None,
     append: Annotated[bool, typer.Option("--append", help="Mit vorhandener Stufe 3 vereinigen statt ersetzen")] = False,
-    instructions: Annotated[bool, typer.Option("--instructions", help="Anleitung für den Agenten ausgeben (prompts/semantic_v1.md)")] = False,
+    instructions: Annotated[bool, typer.Option("--instructions", help="Anleitung für den Agenten ausgeben (prompts/semantic_v2.md)")] = False,
     json_: JsonFlag = False,
     cache_dir: CacheOpt = None,
 ) -> None:
@@ -243,6 +251,43 @@ def semantic(
             sub.source = source
         info = pipeline.submit_semantic(video, sub, append, stderr_progress, cache_dir)
         _out(info, json_, f"{info['llm_cuts']} Stufe-3-Cuts, {info['rejected']} verworfen, {info['cuts']} Cuts gesamt")
+
+    _guard(go, json_)
+
+
+@app.command()
+def events(
+    video: VideoArg,
+    json_: JsonFlag = False,
+    force: Annotated[bool, typer.Option("--force", help="Stufe 1b neu rechnen")] = False,
+    pending: Annotated[bool, typer.Option("--pending", help="Offene Fenster für Ebene C mit Bildpfaden ausgeben")] = False,
+    judge: Annotated[Path | None, typer.Option("--judge", help="JSON mit Urteilen zu offenen Fenstern (EventJudgments)")] = None,
+    source: Annotated[str | None, typer.Option("--source", help="Absender der Urteile, z. B. agent:claude-code")] = None,
+    no_vision: Annotated[bool, typer.Option("--no-vision", help="Ohne Vision-LLM (Ebene C)")] = False,
+    budget: Annotated[int | None, typer.Option("--budget", help="Max. Vision-LLM-Aufrufe")] = None,
+    cache_dir: CacheOpt = None,
+) -> None:
+    """Stufe 1b: Ereignisse erkennen (Pose, CLAP, X-CLIP, VideoMAE, Vision-LLM) bzw. aus dem Cache zeigen.
+    Mit Transkript im Cache kommen die Events auch als Wort-ID-Spannen. --judge reicht Urteile des Agenten ein
+    (Ebene C ohne API-Key, Anleitung: prompts/vision_event_v1.md), danach wird Stufe 4 neu gerechnet."""
+
+    def go():
+        if judge is not None:
+            if not judge.exists():
+                raise FileNotFoundError(judge)
+            sub = EventJudgments.model_validate_json(judge.read_text(encoding="utf-8"))
+            if source:
+                sub.source = source
+            info = pipeline.submit_event_judgments(video, sub, stderr_progress, cache_dir)
+            _out(info, json_, f"{info['count']} Events ({info['confirmed']} bestätigt), {info['rejected']} Urteile verworfen")
+            return
+        cache, analysis = pipeline.run_events(video, force, not no_vision, budget, stderr_progress, cache_dir)
+        info = pipeline.events_info(cache, analysis, pending=pending)
+        lines = [f"{e['id']:>28}  {e['start']:8.2f}-{e['end']:8.2f}  {e['status']:<9} {e['confidence']:.2f}  "
+                 f"{','.join(e['sources'])}" for e in info["events"]]
+        if pending:
+            lines += [f"offen {w['id']}: {w['start']:.1f}-{w['end']:.1f} {w['candidates']} ({w['reason']})" for w in info["windows"]]
+        _out(info, json_, "\n".join(lines) or "Keine Events")
 
     _guard(go, json_)
 

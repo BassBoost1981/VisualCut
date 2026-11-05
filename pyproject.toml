@@ -19,6 +19,7 @@ dependencies = [
     "otio-cmx3600-adapter>=1.0",
     "anthropic>=2.5.0",
     "mcp>=2.3.0",
+    "pyyaml>=6",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +28,15 @@ speech = [
     "whisperx>=3.3",
     "torch>=2.6",
     "torchaudio>=2.6",
+]
+events = [
+    # Stufe 1b: Pose (RTMPose über ONNX, MediaPipe als Fallback), CLAP, X-CLIP, VideoMAE
+    "rtmlib>=0.0.15",
+    "onnxruntime>=1.20",
+    "mediapipe>=0.10.20",
+    "transformers>=4.50",
+    "torch>=2.6",
+    "scipy>=1.13",
 ]
 desktop = [
     "pywebview>=5",
@@ -68,4 +78,7 @@ explicit = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-markers = ["integration: echte Claude-API-Aufrufe, ohne ANTHROPIC_API_KEY geskippt"]
+markers = [
+    "integration: echte Claude-API-Aufrufe, ohne ANTHROPIC_API_KEY geskippt",
+    "models: echte Modellgewichte (Stufe 1b), ohne Extra events geskippt",
+]

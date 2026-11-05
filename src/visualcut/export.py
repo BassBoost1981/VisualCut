@@ -11,7 +11,7 @@ import opentimelineio as otio
 
 from .decisions import for_export
 from .ingest import run
-from .schema import Cut, MediaInfo
+from .schema import Cut, Event, EventStatus, MediaInfo
 
 REASON_COLORS = {
     "filler": otio.schema.MarkerColor.ORANGE,
@@ -43,9 +43,24 @@ def _rt(seconds: float, fps: float) -> otio.opentime.RationalTime:
     return otio.opentime.RationalTime(round(seconds * fps), fps)
 
 
-def build_timeline(media: MediaInfo, cuts: list[Cut], include_open: bool = False, name: str | None = None) -> otio.schema.Timeline:
+def _event_marker(ev: Event, fps: float, clip_end: float) -> otio.schema.Marker:
+    label = ev.label or ev.type
+    desc = f" {ev.description}" if ev.description else ""
+    m = otio.schema.Marker(
+        name=f"Event {label} {ev.confidence:.2f}{desc}".strip(),
+        marked_range=otio.opentime.TimeRange(_rt(ev.start, fps), _rt(max(min(ev.end, clip_end) - ev.start, 1 / fps), fps)),
+        color=otio.schema.MarkerColor.GREEN,
+    )
+    m.metadata["visualcut"] = {"event_id": ev.id, "event_type": ev.type, "kind": "event", "effect": ev.effect.value,
+                               "confidence": ev.confidence}
+    return m
+
+
+def build_timeline(media: MediaInfo, cuts: list[Cut], include_open: bool = False, name: str | None = None,
+                   events: list[Event] | None = None) -> otio.schema.Timeline:
     """Eine Videospur mit den erhaltenen Segmenten. Offene Cuts werden als Marker am Clip gesetzt,
-    außer include_open=True, dann werden sie geschnitten. Verworfene fehlen."""
+    außer include_open=True, dann werden sie geschnitten. Verworfene fehlen. Bestätigte Events aus Stufe 1b
+    kommen als grüne Marker an den Clip, in dem sie beginnen; Kandidaten bleiben weg."""
     fps = media.fps
     to_cut, to_mark = for_export(cuts, include_open)
     tl = otio.schema.Timeline(name=name or Path(media.path).stem)
@@ -76,8 +91,15 @@ def build_timeline(media: MediaInfo, cuts: list[Cut], include_open: bool = False
             )
             m.metadata["visualcut"] = {"cut_id": c.id, "reason": c.reason.value, "confidence": c.confidence}
             clip.markers.append(m)
+        for ev in events or []:
+            if ev.status == EventStatus.confirmed and s <= ev.start < e:
+                clip.markers.append(_event_marker(ev, fps, e))
         track.append(clip)
     return tl
+
+
+def count_event_markers(tl: otio.schema.Timeline) -> int:
+    return sum(1 for clip in tl.tracks[0] for m in clip.markers if (m.metadata.get("visualcut") or {}).get("kind") == "event")
 
 
 # ---------------------------------------------------------------- FCPXML
@@ -144,6 +166,7 @@ RESOLVE_MARKER_COLORS = {
     "filler": "Yellow", "retake": "Red", "long_pause": "Cyan", "tangent": "Purple",
     "false_start": "Pink", "redundant": "Lemon", "technical": "Cream",
 }
+EVENT_MARKER_COLOR = "Green"  # wie die Event-Spur in der UI (#17C964)
 FORMATS = ("fcpxml", "edl", "otio", "markers-edl")
 
 
@@ -170,8 +193,9 @@ def to_marker_edl(tl: otio.schema.Timeline) -> str:
             tl_start = offset + (m.marked_range.start_time - sr.start_time)
             start = round(tl_start.rescaled_to(fps).value)
             dur = max(1, round(m.marked_range.duration.rescaled_to(fps).value))
-            reason = (m.metadata.get("visualcut") or {}).get("reason", "")
-            color = RESOLVE_MARKER_COLORS.get(reason, "Blue")
+            meta_vc = m.metadata.get("visualcut") or {}
+            reason = meta_vc.get("reason", "")
+            color = EVENT_MARKER_COLOR if meta_vc.get("kind") == "event" else RESOLVE_MARKER_COLORS.get(reason, "Blue")
             n += 1
             lines.append(f"{n:03d}  001      V     C        {_tc(start, fps)} {_tc(start + 1, fps)} {_tc(start, fps)} {_tc(start + 1, fps)}")
             name = m.name.replace("|", "/")  # `|` trennt in Resolves EDL die Felder

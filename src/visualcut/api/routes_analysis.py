@@ -22,6 +22,8 @@ class AnalyzeRequest(BaseModel):
     language: str = "de"
     llm: bool = True
     llm_model: str = DEFAULT_MODEL
+    events: bool = True
+    vision: bool = True
 
 
 class JobInfo(BaseModel):
@@ -42,7 +44,8 @@ def start_analysis(body: AnalyzeRequest) -> JobInfo:
     video = Path(body.path)
     if not video.is_file():
         raise HTTPException(422, f"Datei nicht gefunden: {video}")
-    job = manager.start(video, body.stage, body.force, body.whisper_model, body.language, body.llm, body.llm_model)
+    job = manager.start(video, body.stage, body.force, body.whisper_model, body.language, body.llm, body.llm_model,
+                        body.events, body.vision)
     return _info(job)
 
 

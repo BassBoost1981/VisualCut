@@ -16,12 +16,13 @@ from .cache import ProgressFn, ProjectCache, emit
 from .fusion import REASON_PRIORITY
 from .ingest import StageError
 from .schema import (
-    Chapter, Cut, CutSource, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage, Word,
+    Chapter, Cut, CutSource, Event, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage,
+    Word,
 )
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
 STRONG_MODEL = "claude-fable-5-1"
-PROMPT_VERSION = "semantic_v1"
+PROMPT_VERSION = "semantic_v2"  # v2: Ereignisse aus Stufe 1b als Kontext
 BLOCK_WORDS = 2000
 OVERLAP_WORDS = 200
 MAX_OUTPUT_TOKENS = 16000
@@ -220,14 +221,25 @@ def has_api_key() -> bool:
     return bool(os.environ.get(API_KEY_ENV))
 
 
-def call_model(client, model: str, system: str, block: list[Word]) -> LLMResponse:
+def block_content(block: list[Word], words: list[Word], events: list[Event] | None) -> str:
+    """Nummerierte Wörter, danach die Events, die den Block berühren (nur Wort-IDs, keine Sekunden)."""
+    from .events.words import events_on_words, format_events
+
+    text = format_block(block)
+    items = events_on_words(events or [], words, block[0].id, block[-1].id) if block else []
+    if items:
+        text += "\n\n## Ereignisse\n" + format_events(items)
+    return text
+
+
+def call_model(client, model: str, system: str, block: list[Word], content: str | None = None) -> LLMResponse:
     """Ein Block an Claude, Antwort als validiertes `LLMResponse` (Structured Output)."""
     import anthropic
 
     try:
         response = client.messages.parse(
             model=model, max_tokens=MAX_OUTPUT_TOKENS, system=system,
-            messages=[{"role": "user", "content": format_block(block)}],
+            messages=[{"role": "user", "content": content if content is not None else format_block(block)}],
             output_format=LLMResponse,
         )
     except anthropic.APIStatusError as e:
@@ -244,7 +256,7 @@ def call_model(client, model: str, system: str, block: list[Word]) -> LLMRespons
 
 def analyze_semantic(
     speech: SpeechResult, cache: ProjectCache, progress: ProgressFn | None = None, force: bool = False,
-    model: str = DEFAULT_MODEL, enabled: bool = True, client=None,
+    model: str = DEFAULT_MODEL, enabled: bool = True, client=None, events: list[Event] | None = None,
 ) -> SemanticResult | None:
     """Stufe 3. Gibt None zurück, wenn die Stufe übersprungen wurde (kein Key oder --no-llm)."""
     stage = Stage.semantic
@@ -273,7 +285,8 @@ def analyze_semantic(
     for i, block in enumerate(parts):
         emit(progress, "progress", stage, f"Block {i + 1}/{len(parts)} ({block[0].id}..{block[-1].id}) an {model}",
              100 * i / len(parts))
-        results.append(validate(call_model(client, model, system, block), block, progress))
+        content = block_content(block, speech.words, events)
+        results.append(validate(call_model(client, model, system, block, content), block, progress))
     result = combine(results)
     result.model, result.prompt_version = model, PROMPT_VERSION
     cache.save(stage, result)

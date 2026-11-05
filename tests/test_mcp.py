@@ -61,7 +61,8 @@ def test_tools_are_registered():
         async with Client(server) as c:
             return sorted(t.name for t in (await c.list_tools()).tools)
 
-    assert asyncio.run(names()) == ["analyze", "decide", "export", "get_cuts", "get_transcript", "get_transcript_path", "schema", "semantic_instructions", "submit_semantic"]
+    assert asyncio.run(names()) == ["analyze", "decide", "export", "get_cuts", "get_events", "get_transcript", "get_transcript_path",
+                                    "judge_events", "schema", "semantic_instructions", "submit_semantic"]
 
 
 def test_get_cuts_matches_cli(cache_env):

@@ -20,14 +20,18 @@ from pydantic import ValidationError
 from . import __version__, decisions as decisions_mod, export as export_mod, pipeline
 from .cache import stderr_progress
 from .ingest import StageError
-from .schema import CutStatus, LLMChapter, LLMCut, LLMFlag, LLMHighlight, SemanticSubmission, Stage, json_schema
+from .schema import (
+    CutStatus, EventJudgment, EventJudgments, LLMChapter, LLMCut, LLMFlag, LLMHighlight, SemanticSubmission, Stage,
+    json_schema,
+)
 from .semantic import DEFAULT_MODEL, load_prompt
 
 INSTRUCTIONS = (
     "VisualCut analysiert Rohvideo lokal und liefert framegenaue Schnittvorschläge. Ablauf: analyze(path) "
     "(dauert bei langen Videos Minuten, Cache unter .visualcut/<hash>/), dann get_cuts(path) zum Erklären "
     "und Filtern, decide(path, cut_id, status) zum Annehmen oder Verwerfen, export(path, format) für die "
-    "Schnittliste. Große Daten kommen als Pfad zurück: analysis.json (alles) und speech.json (Transkript "
+    "Schnittliste. get_events(path) liefert erkannte Ereignisse (Tanzen, Lachen, Musik) und offene Fenster, "
+    "die du mit judge_events beurteilen kannst. Große Daten kommen als Pfad zurück: analysis.json (alles) und speech.json (Transkript "
     "mit Wort-IDs). Cuts referenzieren Wort-IDs; Sekunden und Frames berechnet der Code, nie das LLM."
 )
 
@@ -61,14 +65,18 @@ def _video(path: str) -> Path:
 @tool
 def analyze(
     path: str, stage: Stage = Stage.fusion, force: bool = False, language: str = "de",
-    whisper_model: str = "large-v3", llm: bool = True, model: str = DEFAULT_MODEL,
+    whisper_model: str = "large-v3", llm: bool = True, model: str = DEFAULT_MODEL, events: bool = True,
+    vision: bool = True,
 ) -> dict[str, Any]:
-    """Pipeline laufen lassen (ingest, technical, speech, semantic, fusion) und Kennzahlen plus den Pfad zu
-    analysis.json zurückgeben. Fertige Stufen kommen aus dem Cache, force=True rechnet neu. Stufe semantic
-    braucht ANTHROPIC_API_KEY, ohne Key wird sie übersprungen; llm=False schaltet sie ab."""
+    """Pipeline laufen lassen (ingest, technical, events, speech, semantic, fusion) und Kennzahlen plus den Pfad
+    zu analysis.json zurückgeben. Fertige Stufen kommen aus dem Cache, force=True rechnet neu. Stufe semantic
+    braucht ANTHROPIC_API_KEY, ohne Key wird sie übersprungen; llm=False schaltet sie ab. Stufe events
+    (Ereigniserkennung: Tanzen, Lachen, Musik ...) braucht das Extra `events`; events=False schaltet sie ab,
+    vision=False nur das Vision-LLM darin."""
     video = _video(path)
     analysis = pipeline.run_analysis(
         video, stage, force, stderr_progress, None, whisper_model, language, llm=llm, llm_model=model,
+        events=events, vision=vision,
     )
     cache = pipeline.cache_for(video)
     cache.path("analysis.json").write_text(analysis.model_dump_json(indent=2), encoding="utf-8")
@@ -110,11 +118,32 @@ def export(path: str, format: str = "fcpxml", out: str | None = None, open_as_cu
     video = _video(path)
     cache, analysis = pipeline.require_analysis(video)
     target = Path(out) if out else cache.path(f"{video.stem}.{format}")
-    tl = export_mod.build_timeline(analysis.media, analysis.cuts, include_open=open_as_cut)
+    tl = export_mod.build_timeline(analysis.media, analysis.cuts, include_open=open_as_cut, events=analysis.events)
     export_mod.write(tl, target, format)
     to_cut, to_mark = decisions_mod.for_export(analysis.cuts, open_as_cut)
     return {"path": str(target), "format": format, "cuts_applied": len(to_cut), "markers": len(to_mark),
-            "clips": len(list(tl.tracks[0]))}
+            "event_markers": export_mod.count_event_markers(tl), "clips": len(list(tl.tracks[0]))}
+
+
+@tool
+def get_events(path: str, pending: bool = True, force: bool = False) -> dict[str, Any]:
+    """Stufe 1b: erkannte Ereignisse (Tanzen, Lachen, Applaus, Musik, niemand im Bild ...) mit Sekunden,
+    Status (confirmed/candidate), Quellen und, wenn das Transkript da ist, Wort-ID-Spannen (start_word,
+    end_word, spoken) für Stufe 3. Rechnet die Stufe, falls sie fehlt (force=True: neu). pending=True liefert
+    zusätzlich die offenen Fenster für Ebene C mit Pfaden zu 4 bis 8 Einzelbildern: ansehen und mit
+    judge_events beurteilen, Regeln in instructions_path (prompts/vision_event_v1.md)."""
+    cache, analysis = pipeline.run_events(_video(path), force, progress=stderr_progress)
+    return pipeline.events_info(cache, analysis, pending=pending)
+
+
+@tool
+def judge_events(path: str, judgments: list[EventJudgment], source: str = "agent") -> dict[str, Any]:
+    """Ebene C ohne API-Key: Urteile zu offenen Fenstern aus get_events einreichen. Pro Urteil window_id,
+    type (ein Typ aus der Liste oder "none"), confidence (0 bis 1), description (ein Satz auf Deutsch). Keine
+    Zeitangaben. Unbekannte Fenster oder Typen werden verworfen und gezählt. Danach werden die Events neu
+    fusioniert und die Schnittvorschläge (Regel 8) neu gerechnet."""
+    sub = EventJudgments(source=source, judgments=judgments)
+    return pipeline.submit_event_judgments(_video(path), sub, stderr_progress)
 
 
 @tool
@@ -136,7 +165,7 @@ def get_transcript_path(path: str) -> dict[str, Any]:
 
 @tool
 def semantic_instructions() -> str:
-    """Anleitung für Stufe 3 (prompts/semantic_v1.md): Regeln, erlaubte reason-Werte, Ausgabeformat. Vor
+    """Anleitung für Stufe 3 (prompts/semantic_v2.md): Regeln, erlaubte reason-Werte, Ausgabeformat. Vor
     submit_semantic einmal lesen und befolgen."""
     return load_prompt()
 
@@ -145,7 +174,8 @@ def semantic_instructions() -> str:
 def get_transcript(path: str, start_word: int = 0, max_words: int = 2000) -> dict[str, Any]:
     """Transkript als `ID TEXT`-Zeilen ab start_word, höchstens max_words Wörter (Standard 2000, wie ein
     API-Block). Blockweise durchgehen: next_word ist die nächste ID oder null am Ende. Das ist die Eingabe
-    für submit_semantic; verwende ausschließlich diese IDs."""
+    für submit_semantic; verwende ausschließlich diese IDs. `events` sind die Ereignisse aus Stufe 1b, die den
+    Block berühren, als Wort-ID-Spannen (Regeln dazu in semantic_instructions)."""
     cache = pipeline.cache_for(_video(path))
     analysis = pipeline.load_analysis(cache)
     if analysis is None or analysis.speech is None:
@@ -154,7 +184,7 @@ def get_transcript(path: str, start_word: int = 0, max_words: int = 2000) -> dic
     text, first, last = pipeline.transcript_lines(analysis.speech, start_word, start_word + max(1, max_words) - 1)
     nxt = next((w.id for w in words if w.id > last), None) if text else None
     return {"language": analysis.speech.language, "total_words": len(words), "first_word": first, "last_word": last,
-            "next_word": nxt, "lines": text}
+            "next_word": nxt, "lines": text, "events": pipeline.transcript_events(analysis, first, last)}
 
 
 @tool

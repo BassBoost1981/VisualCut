@@ -4,6 +4,18 @@ Pipeline-Plan, Stand 2026-11-05. Ziel: Ein lokales Werkzeug, das ein Rohvideo an
 
 Das Werkzeug ist agentenneutral: Claude Code, Codex, T3 Code und OpenCode steuern es über dasselbe CLI und denselben MCP-Server.
 
+## Stand (2026-11-05, abends)
+
+Phasen 1 bis 3 sind umgesetzt und auf GitHub (`BassBoost1981/VisualCut`, Branch `main`). Der aktuelle Funktionsumfang steht in `AGENTS.md`, das ist die verbindliche Kurzreferenz für Agenten; dieser Plan bleibt die Begründung und der Fahrplan.
+
+Abweichungen vom ursprünglichen Plan, bewusst so entschieden:
+- **Stufe 3 hat zwei Wege.** Weg A ohne API-Key: der steuernde Agent ist selbst das LLM, holt das Transkript blockweise und reicht Cuts auf Wort-IDs ein (`visualcut semantic --from`, MCP `submit_semantic`). Weg B: Claude API automatisch in `visualcut analyze`, wenn `ANTHROPIC_API_KEY` gesetzt ist.
+- **Zusätzliches Exportformat `markers-edl`:** farbige Timeline-Marker für Resolve, weil der FCPXML-Import Marker nicht zuverlässig mitnimmt.
+- **Desktop-App schon jetzt, mit pywebview statt Tauri.** `visualcut-desktop` startet Backend und UI in einem nativen Fenster, `packaging/build.ps1` baut eine eigenständige `VisualCut.exe` (rund 5 GB mit CUDA-Torch). Tauri entfällt.
+- **Hardware geklärt:** RTX 4090 mit 24 GB VRAM, Whisper `large-v3` float16 ist Standard.
+
+Offen: Phase 4 (Ereigniserkennung, Stufe 1b) und Phase 5 (Verfeinerung). Die Review-Schleife mit Stilprofil und `visualcut diff` existiert noch nicht.
+
 ---
 
 ## 1. Annahmen
@@ -410,7 +422,7 @@ VisualCut/
 | Frontend | Vite, React 19, TypeScript | Standard, Agenten kennen es blind |
 | UI-Komponenten | HeroUI + Tailwind 4 | Vollständiger Satz, dunkles Theme, Tastatur-Zugänglichkeit eingebaut |
 | Wellenform | wavesurfer.js | Ausgereift, Regions-Plugin für ziehbare Cuts |
-| Desktop-Hülle (später) | Tauri | Leichter als Electron, Frontend bleibt unverändert |
+| Desktop-Hülle | pywebview + PyInstaller (umgesetzt) | Bleibt im Python-Prozess, kein Rust-Toolchain, WebView2 ist auf Windows 11 vorhanden; Tauri verworfen |
 
 Bewusst **nicht** gewählt: Electron (zu schwer für eine Hülle), Next.js (kein SSR nötig, Vite reicht), Raven (siehe 5.4).
 

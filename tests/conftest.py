@@ -14,7 +14,8 @@ from make_fixture import FPS, SCENE_CUT_FRAMES, SILENCES, build  # noqa: E402
 from visualcut.cache import ProjectCache  # noqa: E402
 from visualcut.fusion import fuse  # noqa: E402
 from visualcut.ingest import ingest  # noqa: E402
-from visualcut.schema import Cut, CutReason, FusionResult, SpeechResult, Stage, Word  # noqa: E402
+from visualcut.events import catalog  # noqa: E402
+from visualcut.schema import Cut, CutReason, EventsResult, FusionResult, SpeechResult, Stage, Word  # noqa: E402
 from visualcut.speech import rule_cuts  # noqa: E402
 from visualcut.technical import analyze_technical  # noqa: E402
 
@@ -43,6 +44,8 @@ def analyzed(synthetic_video: Path, session_cache_root: Path) -> ProjectCache:
     cache = ProjectCache.for_video(synthetic_video, session_cache_root)
     media = ingest(synthetic_video, cache)
     tech = analyze_technical(media, cache)
+    # Stufe 1b konstruiert (leer), damit hier keine Modelle laden; echte Läufe stehen in test_events.py
+    cache.save(Stage.events, EventsResult(detection_hash=catalog.detection_hash(catalog.load(cache))))
     words = fake_words()
     speech = SpeechResult(words=words, language="de", model="fake", device="cpu", aligned=False,
                           text=" ".join(w.text for w in words))
