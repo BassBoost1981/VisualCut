@@ -14,7 +14,15 @@ Abweichungen vom ursprünglichen Plan, bewusst so entschieden:
 - **Desktop-App schon jetzt, mit pywebview statt Tauri.** `visualcut-desktop` startet Backend und UI in einem nativen Fenster, `packaging/build.ps1` baut eine eigenständige `VisualCut.exe` (rund 5 GB mit CUDA-Torch). Tauri entfällt.
 - **Hardware geklärt:** RTX 4090 mit 24 GB VRAM, Whisper `large-v3` float16 ist Standard.
 
-Offen: Phase 4 (Ereigniserkennung, Stufe 1b) und Phase 5 (Verfeinerung). Die Review-Schleife mit Stilprofil und `visualcut diff` existiert noch nicht.
+Phase 4 (Stufe 1b) ist umgesetzt, lokal auf `main`. Abweichungen und Befunde:
+- **Tanz-Signal aus dem Unterkörper statt aus der Periodizität.** An einem Tanzvideo und einem Talking-Head-Stream kalibriert: Ganzkörperenergie und Periodizität der Rumpfbahn unterscheiden Tanzen und Gestikulieren nicht, die Bewegung von Hüften, Knien und Knöcheln schon. Die Periodizität fließt nur noch in die Konfidenz.
+- **CLAP braucht Sprach-Vergleichsklassen.** Ohne sie hielt CLAP aufgeregtes Sprechen in 63 % der Fenster für Lachen, mit ihnen in 8 %.
+- **Ebene C hat zwei Wege wie Stufe 3:** Claude mit Einzelbildern, wenn `ANTHROPIC_API_KEY` gesetzt ist, sonst beurteilt der steuernde Agent die offenen Fenster (`visualcut events --judge`, MCP `judge_events`). Gemini ist nicht eingebaut.
+- **Wirkung `cut` blockiert Regel 8 nicht:** Bei einem Schnitt-Kandidaten (Trinkpause, niemand im Bild) darf geschnitten werden. Kandidaten blockieren ebenfalls nicht, nur bestätigte Events.
+- **Pose auf der CPU** (etwa 15 ms pro Frame), weil `onnxruntime-gpu` mit dem `onnxruntime` von faster-whisper kollidiert. CLAP, X-CLIP und VideoMAE laufen auf der GPU.
+- **Erfolgskriterien:** Das Talking-Head-Video liefert kein Tanz-Event, das Tanzvideo ein bestätigtes ab 11,4 s. Ob das auf ±500 ms stimmt, ist ohne handannotierten Sollwert nicht geprüft. Ob das LLM das Tanz-Event als Highlight nennt, ist ohne Lauf von Stufe 3 auf dem Tanzvideo nicht geprüft.
+
+Offen: Phase 5 (Verfeinerung). Die Review-Schleife mit Stilprofil und `visualcut diff` existiert noch nicht. Die Desktop-Exe bündelt die Modelle von Stufe 1b noch nicht.
 
 ---
 

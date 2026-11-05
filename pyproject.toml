@@ -63,6 +63,7 @@ packages = ["src/visualcut"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "prompts" = "visualcut/prompts"
+"events.yaml" = "visualcut/events.yaml"
 
 [tool.uv]
 # torch/torchaudio mit CUDA 12.8 von der PyTorch-Index-URL

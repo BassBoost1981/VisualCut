@@ -10,6 +10,7 @@ ROOT = Path(SPECPATH).parent
 datas = [
     (str(ROOT / "ui" / "dist"), "ui"),
     (str(ROOT / "prompts"), "visualcut/prompts"),
+    (str(ROOT / "events.yaml"), "visualcut"),  # Standard-Ereignisliste (Stufe 1b)
 ]
 binaries = []
 hiddenimports = []
