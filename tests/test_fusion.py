@@ -98,7 +98,7 @@ def test_close_cuts_merge_and_retake_wins():
     assert c.reason == CutReason.retake
     assert c.id == "r"
     assert (c.start_word, c.end_word) == (5, 9)
-    assert c.confidence == 0.9
+    assert c.confidence == 0.7  # Konfidenz des führenden Retakes, nicht des geschluckten Füllworts
 
 
 def test_min_segment_at_start_extends_to_zero():

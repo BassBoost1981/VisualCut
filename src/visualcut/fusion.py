@@ -122,7 +122,7 @@ def _merge(a: _Span, b: _Span) -> _Span:
         lead.cut,
         start_word=min(a.cut.start_word, b.cut.start_word),
         end_word=max(a.cut.end_word, b.cut.end_word),
-        confidence=max(a.cut.confidence, b.cut.confidence),
+        confidence=lead.cut.confidence,  # die Konfidenz des führenden Grundes, nicht das Maximum
         note=(lead.cut.note + (f" | zusammengeführt mit {other.cut.id}: {other.cut.note}" if other.cut.note else "")).strip(" |"),
     )
     return _Span(cut, min(a.start, b.start), max(a.end, b.end))
