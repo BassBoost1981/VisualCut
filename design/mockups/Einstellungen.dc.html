@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>VisualCut Einstellungen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#09090b}
+a{color:#A1A1AA;text-decoration:none}a:hover{color:#ECEDEE}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 100vh; box-sizing: border-box; background: #09090b; color: #ECEDEE; font-family: Inter, system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <header style="height: 56px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; gap: 32px; border-bottom: 1px solid #27272a; background: #0f0f12">
+    <div style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#338EF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M8 5v14M16 5v14M3 12h18"></path></svg>
+      VisualCut
+    </div>
+    <nav aria-label="Hauptnavigation" style="display: flex; gap: 4px; flex-wrap: wrap">
+      <a href="Start.dc.html" style="padding: 8px 14px; border-radius: 10px">Start</a>
+      <a href="Analyse.dc.html" style="padding: 8px 14px; border-radius: 10px">Analyse</a>
+      <a href="Main.dc.html" style="padding: 8px 14px; border-radius: 10px">Review</a>
+      <a href="Export.dc.html" style="padding: 8px 14px; border-radius: 10px">Export</a>
+      <a href="Einstellungen.dc.html" style="padding: 8px 14px; border-radius: 10px; background: #27272a; color: #ECEDEE; font-weight: 600">Einstellungen</a>
+    </nav>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 12px; font-weight: 500"><span style="width: 7px; height: 7px; border-radius: 50%; background: #17C964"></span>GPU bereit · 24 GB</span>
+    </div>
+  </header>
+
+  <div style="flex: 1; box-sizing: border-box; padding: 24px; max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <!-- Seitenmenü -->
+    <nav aria-label="Einstellungsbereiche" style="flex: 1 1 200px; max-width: 240px; display: flex; flex-direction: column; gap: 4px">
+      <a href="#modelle" style="padding: 10px 14px; border-radius: 10px; background: #27272a; color: #ECEDEE; font-weight: 600">Modelle</a>
+      <a href="#schwellen" style="padding: 10px 14px; border-radius: 10px">Schwellen</a>
+      <a href="#ereignisse" style="padding: 10px 14px; border-radius: 10px">Ereignisse</a>
+      <a href="#api" style="padding: 10px 14px; border-radius: 10px">API-Schlüssel</a>
+      <a href="#agenten" style="padding: 10px 14px; border-radius: 10px">Agenten-Zugang</a>
+      <a href="#stil" style="padding: 10px 14px; border-radius: 10px">Stilprofil</a>
+    </nav>
+
+    <!-- Inhalt -->
+    <div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+      <section id="modelle" aria-label="Modelle" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Modelle</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="whisper" style="font-size: 13px">Whisper</label>
+            <select id="whisper" style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font: inherit">
+              <option>large-v3 · float16 · beste Qualität</option>
+              <option>medium · int8 · wenig VRAM</option>
+              <option>turbo · schnell, Englisch</option>
+            </select>
+            <span style="color: #A1A1AA; font-size: 12px">Fällt bei VRAM-Mangel automatisch auf medium zurück.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="llm" style="font-size: 13px">Sprachmodell (Semantik)</label>
+            <select id="llm" style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font: inherit">
+              <option>Claude Sonnet · Standard</option>
+              <option>Claude Fable · schwieriges Material</option>
+            </select>
+            <span style="color: #A1A1AA; font-size: 12px">Bekommt nur Wort-IDs, nie Zeiten.</span>
+          </div>
+        </div>
+        <label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer">
+          <span style="display: flex; flex-direction: column; gap: 2px"><span>Sprecher-Trennung (pyannote)</span><span style="color: #A1A1AA; font-size: 12px">Nur sinnvoll bei mehr als einer Stimme. Kostet etwa 20 % Zeit.</span></span>
+          <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #006FEE; flex-shrink: 0">
+        </label>
+      </section>
+
+      <section id="schwellen" aria-label="Schwellen" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: baseline; gap: 10px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Schwellen</h2><span style="color: #A1A1AA; font-size: 12px">Profil: Talking-Head</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="stille">Stille-Schwelle</label><span style="font-family: 'JetBrains Mono', monospace">−35 dB</span></div>
+            <input id="stille" type="range" min="-60" max="-20" value="-35" style="accent-color: #006FEE">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="pause">Pause gilt als Cut ab</label><span style="font-family: 'JetBrains Mono', monospace">1,2 s</span></div>
+            <input id="pause" type="range" min="0.5" max="3" step="0.1" value="1.2" style="accent-color: #006FEE">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="fuell">Füllwort-Toleranz</label><span style="color: #A1A1AA">streng</span></div>
+            <input id="fuell" type="range" min="0" max="4" value="1" style="accent-color: #006FEE">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="aggro">Aggressivität der Semantik</label><span style="color: #A1A1AA">mittel</span></div>
+            <input id="aggro" type="range" min="0" max="4" value="2" style="accent-color: #006FEE">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="pre">Pre-Roll / Post-Roll</label><span style="font-family: 'JetBrains Mono', monospace">80 / 120 ms</span></div>
+            <input id="pre" type="range" min="0" max="300" step="10" value="80" style="accent-color: #006FEE">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><label for="maybe">Ab dieser Konfidenz automatisch angenommen</label><span style="font-family: 'JetBrains Mono', monospace">0,85</span></div>
+            <input id="maybe" type="range" min="0.5" max="1" step="0.01" value="0.85" style="accent-color: #006FEE">
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <span style="color: #A1A1AA; font-size: 12px; align-self: center">Füllwörter:</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">ähm</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">äh</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">also (Satzanfang)</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">halt</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">quasi</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #0f0f12; border: 1px solid #27272a; font-size: 12px">sozusagen</span>
+          <button type="button" style="padding: 4px 10px; border-radius: 999px; border: 1px dashed #3f3f46; background: transparent; color: #A1A1AA; font: inherit; font-size: 12px; cursor: pointer">+ hinzufügen</button>
+        </div>
+      </section>
+
+      <section id="ereignisse" aria-label="Ereignisse" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Ereignisse</h2><span style="color: #A1A1AA; font-size: 12px">events.yaml · Textbeschreibungen für X-CLIP, frei erweiterbar</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 110px 40px; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">person dancing</span>
+            <span style="font-size: 12px; color: #A1A1AA">Anzeige: tanzt</span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 11px; font-weight: 600; text-align: center">Highlight</span>
+            <button type="button" aria-label="Entfernen" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #A1A1AA; cursor: pointer">×</button>
+          </div>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 110px 40px; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">person laughing</span>
+            <span style="font-size: 12px; color: #A1A1AA">Anzeige: lacht</span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 11px; font-weight: 600; text-align: center">Highlight</span>
+            <button type="button" aria-label="Entfernen" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #A1A1AA; cursor: pointer">×</button>
+          </div>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 110px 40px; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">person holding object towards camera</span>
+            <span style="font-size: 12px; color: #A1A1AA">Anzeige: zeigt Produkt</span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: #27272a; color: #A1A1AA; font-size: 11px; font-weight: 600; text-align: center">Marker</span>
+            <button type="button" aria-label="Entfernen" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #A1A1AA; cursor: pointer">×</button>
+          </div>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 110px 40px; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">person leaving the frame</span>
+            <span style="font-size: 12px; color: #A1A1AA">Anzeige: verlässt Bild</span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: #3b0a1b; color: #F871A0; font-size: 11px; font-weight: 600; text-align: center">Schnitt</span>
+            <button type="button" aria-label="Entfernen" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #A1A1AA; cursor: pointer">×</button>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <input type="text" placeholder="Neue Aktion auf Englisch, z. B. person drinking coffee" aria-label="Neue Aktion" style="flex: 1; height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font: inherit">
+            <button type="button" style="height: 40px; padding: 0 16px; border-radius: 10px; border: none; background: #006FEE; color: #fff; font: inherit; font-weight: 600; cursor: pointer">Hinzufügen</button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #27272a">
+          <span style="display: flex; flex-direction: column; gap: 2px"><span>Vision-LLM-Budget pro Video</span><span style="color: #A1A1AA; font-size: 12px">Nur für unklare Fälle. Zähler erscheint im Analyse-Log.</span></span>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <input type="range" min="0" max="100" value="40" aria-label="Vision-Budget" style="width: 140px; accent-color: #006FEE">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 80px">40 Aufrufe</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="api" aria-label="API-Schlüssel" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">API-Schlüssel</h2><span style="color: #A1A1AA; font-size: 12px">Nur lokal in der Windows-Anmeldeinformationsverwaltung gespeichert.</span></div>
+        <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 100px; gap: 10px; align-items: center">
+          <label for="k1" style="font-size: 13px">Anthropic</label>
+          <input id="k1" type="password" value="sk-ant-••••••••••••••••••••7Qx2" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+          <span style="padding: 6px 10px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 12px; font-weight: 600; text-align: center">geprüft</span>
+          <label for="k2" style="font-size: 13px">Google (Gemini)</label>
+          <input id="k2" type="password" placeholder="optional, für Ebene C mit Video" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+          <span style="padding: 6px 10px; border-radius: 999px; background: #27272a; color: #A1A1AA; font-size: 12px; text-align: center">nicht gesetzt</span>
+          <label for="k3" style="font-size: 13px">Hugging Face</label>
+          <input id="k3" type="password" value="hf_••••••••••••••••••••Lm9c" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #3f3f46; background: #0f0f12; color: #ECEDEE; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+          <span style="padding: 6px 10px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 12px; font-weight: 600; text-align: center">geprüft</span>
+        </div>
+      </section>
+
+      <section id="agenten" aria-label="Agenten-Zugang" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Agenten-Zugang</h2><span style="color: #A1A1AA; font-size: 12px">MCP-Server läuft über stdio, gleiche Funktionen wie diese UI.</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 13px">Claude Code</span><span style="color: #A1A1AA; font-size: 11px; font-family: 'JetBrains Mono', monospace">.mcp.json</span></span>
+            <span style="display: flex; gap: 6px; align-items: center"><span style="padding: 3px 8px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 11px; font-weight: 600">verbunden</span><button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; font-size: 12px; cursor: pointer">Snippet</button></span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 13px">Codex</span><span style="color: #A1A1AA; font-size: 11px; font-family: 'JetBrains Mono', monospace">~/.codex/config.toml</span></span>
+            <span style="display: flex; gap: 6px; align-items: center"><span style="padding: 3px 8px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 11px; font-weight: 600">verbunden</span><button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; font-size: 12px; cursor: pointer">Snippet</button></span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 13px">OpenCode</span><span style="color: #A1A1AA; font-size: 11px; font-family: 'JetBrains Mono', monospace">opencode.json</span></span>
+            <span style="display: flex; gap: 6px; align-items: center"><span style="padding: 3px 8px; border-radius: 999px; background: #27272a; color: #A1A1AA; font-size: 11px">nicht gesehen</span><button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; font-size: 12px; cursor: pointer">Snippet</button></span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0f0f12; border: 1px solid #27272a">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 13px">T3 Code</span><span style="color: #A1A1AA; font-size: 11px">erbt Claude Code / Codex</span></span>
+            <span style="display: flex; gap: 6px; align-items: center"><span style="padding: 3px 8px; border-radius: 999px; background: #0f2a1a; color: #45D483; font-size: 11px; font-weight: 600">verbunden</span><button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; font-size: 12px; cursor: pointer">Snippet</button></span>
+          </div>
+        </div>
+        <div style="color: #A1A1AA; font-size: 12px">Letzter Agenten-Aufruf: Claude Code · get_cuts(interview_rohschnitt.mp4, min_confidence=0.7) · vor 9 Minuten</div>
+      </section>
+
+      <section id="stil" aria-label="Stilprofil" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 18px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Stilprofil</h2><span style="color: #A1A1AA; font-size: 12px">Gelernt aus 3 abgeschlossenen Reviews.</span></div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <div style="padding: 12px 14px; border-radius: 12px; background: #0f0f12; border: 1px solid #27272a; display: flex; flex-direction: column; gap: 4px">
+            <span style="color: #A1A1AA; font-size: 12px">Füllwort-Vorschläge angenommen</span>
+            <span style="font-size: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace">94 %</span>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 12px; background: #0f0f12; border: 1px solid #27272a; display: flex; flex-direction: column; gap: 4px">
+            <span style="color: #A1A1AA; font-size: 12px">Abschweifungen angenommen</span>
+            <span style="font-size: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: #F5A524">41 %</span>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 12px; background: #0f0f12; border: 1px solid #27272a; display: flex; flex-direction: column; gap: 4px">
+            <span style="color: #A1A1AA; font-size: 12px">Pausen, die du behalten hast</span>
+            <span style="font-size: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace">ab 1,6 s</span>
+          </div>
+        </div>
+        <div style="color: #A1A1AA; font-size: 13px; line-height: 1.5">Daraus abgeleitet: Abschweifungen werden ab jetzt nur noch als <span style="color: #ECEDEE">maybe</span> vorgeschlagen, die Pausenschwelle wurde von 1,2 s auf 1,6 s angehoben. Beide Werte kannst du oben überschreiben.</div>
+        <div style="display: flex; gap: 8px">
+          <button type="button" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; cursor: pointer">Profil exportieren</button>
+          <button type="button" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3f3f46; background: transparent; color: #F871A0; font: inherit; cursor: pointer">Zurücksetzen</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

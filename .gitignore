@@ -1,0 +1,13 @@
+.visualcut/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+tests/fixtures/*.mp4
+tests/fixtures/*.wav
+*.fcpxml
+*.edl
+*.otio

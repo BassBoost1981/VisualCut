@@ -1,0 +1,19 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-05T11:40:00Z"},
+  "title": "VisualCut UI",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Start.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 900, "title": "1 · Start", "expand": "fill"},
+    "Analyse.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 900, "title": "2 · Analyse", "expand": "fill"},
+    "Main.dc.html": {"x": 0, "y": 1020, "w": 1440, "h": 1040, "title": "3 · Review (Herzstück)", "expand": "fill"},
+    "Export.dc.html": {"x": 1520, "y": 1020, "w": 1440, "h": 900, "title": "4 · Export", "expand": "fill"},
+    "Einstellungen.dc.html": {"x": 0, "y": 2180, "w": 1440, "h": 900, "title": "5 · Einstellungen", "expand": "fill"}
+  },
+  "order": ["Start.dc.html", "Analyse.dc.html", "Main.dc.html", "Export.dc.html", "Einstellungen.dc.html"],
+  "notes": {
+    "t1": {"x": 0, "y": -300, "text": "VisualCut · Screens (HeroUI, dunkles Theme)", "kind": "title1", "maxW": 2960}
+  },
+  "designSystems": []
+}

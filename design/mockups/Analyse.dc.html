@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>VisualCut Analyse</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#09090b}
+a{color:#A1A1AA;text-decoration:none}a:hover{color:#ECEDEE}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 100vh; box-sizing: border-box; background: #09090b; color: #ECEDEE; font-family: Inter, system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <header style="height: 56px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; gap: 32px; border-bottom: 1px solid #27272a; background: #0f0f12">
+    <div style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#338EF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M8 5v14M16 5v14M3 12h18"></path></svg>
+      VisualCut
+    </div>
+    <nav aria-label="Hauptnavigation" style="display: flex; gap: 4px; flex-wrap: wrap">
+      <a href="Start.dc.html" style="padding: 8px 14px; border-radius: 10px">Start</a>
+      <a href="Analyse.dc.html" style="padding: 8px 14px; border-radius: 10px; background: #27272a; color: #ECEDEE; font-weight: 600">Analyse</a>
+      <a href="Main.dc.html" style="padding: 8px 14px; border-radius: 10px">Review</a>
+      <a href="Export.dc.html" style="padding: 8px 14px; border-radius: 10px">Export</a>
+      <a href="Einstellungen.dc.html" style="padding: 8px 14px; border-radius: 10px">Einstellungen</a>
+    </nav>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #0b2447; color: #338EF7; font-size: 12px; font-weight: 500"><span style="width: 7px; height: 7px; border-radius: 50%; background: #338EF7"></span>GPU 94 % · 18,3 / 24 GB</span>
+    </div>
+  </header>
+
+  <div style="box-sizing: border-box; padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #27272a">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-weight: 600; font-size: 15px">podcast_folge_17.mov</div>
+      <div style="color: #A1A1AA; font-size: 12px">1:12:05 · 3840×2160 · 50 fps · Proxy 720p erzeugt</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 10px; background: #18181b; border: 1px solid #27272a; font-size: 13px">
+      <span style="color: #A1A1AA">Gesamt</span>
+      <div style="width: 160px; height: 8px; border-radius: 999px; background: #27272a; overflow: hidden"><div style="width: 38%; height: 100%; background: #338EF7"></div></div>
+      <span style="font-weight: 600">38 %</span>
+      <span style="color: #A1A1AA">· noch etwa 4 min</span>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 8px">
+      <button type="button" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; font-weight: 500; cursor: pointer">Pausieren</button>
+      <button type="button" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid #F31260; background: transparent; color: #F871A0; font: inherit; font-weight: 500; cursor: pointer">Abbrechen</button>
+    </div>
+  </div>
+
+  <div style="flex: 1; box-sizing: border-box; padding: 20px 24px 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+    <!-- Stufen -->
+    <section aria-label="Stufen" style="flex: 1 1 420px; min-width: 0; max-width: 620px; display: flex; flex-direction: column; gap: 10px">
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #17C964; color: #052e16; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg></div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 0 · Ingest</span><span style="color: #A1A1AA; font-size: 12px">Proxy, Audio, Hash</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px; font-family: 'JetBrains Mono', monospace">1:42</span></div>
+          <div style="color: #A1A1AA; font-size: 12px">Proxy 1280×720 H.264 · Audio 16 kHz mono + 48 kHz · Cache-Schlüssel 9f3a…c21e</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #17C964; color: #052e16; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg></div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 1 · Technische Analyse</span><span style="color: #A1A1AA; font-size: 12px">Szenen, Stille, Lautheit</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px; font-family: 'JetBrains Mono', monospace">0:58</span></div>
+          <div style="color: #A1A1AA; font-size: 12px">31 Szenenwechsel · 214 Stille-Inseln · kein Schwarzbild · 2 Clipping-Stellen</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #17C964; color: #052e16; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg></div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 1b · Ereignisse</span><span style="color: #A1A1AA; font-size: 12px">Pose, Audio-Tags, X-CLIP</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px; font-family: 'JetBrains Mono', monospace">3:21</span></div>
+          <div style="color: #A1A1AA; font-size: 12px">7 Kandidatenfenster · 2 bestätigt (lacht, steht auf) · 1 Vision-LLM-Aufruf von 40</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #338EF7; border-radius: 14px; padding: 14px 16px; box-sizing: border-box">
+        <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid #338EF7; border-top-color: #27272a; box-sizing: border-box; flex-shrink: 0" aria-label="läuft"></div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 2 · Transkription</span><span style="color: #A1A1AA; font-size: 12px">faster-whisper large-v3 + whisperX</span><span style="margin-left: auto; color: #338EF7; font-size: 12px; font-weight: 600">62 %</span></div>
+          <div style="height: 8px; border-radius: 999px; background: #27272a; overflow: hidden"><div style="width: 62%; height: 100%; background: #338EF7"></div></div>
+          <div style="color: #A1A1AA; font-size: 12px">Chunk 5 von 8 · 44:40 verarbeitet · 5.612 Wörter · Alignment läuft parallel</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; opacity: 0.7">
+        <div style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #3f3f46; box-sizing: border-box; flex-shrink: 0; color: #A1A1AA; font-size: 12px; display: flex; align-items: center; justify-content: center">3</div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 3 · Semantik</span><span style="color: #A1A1AA; font-size: 12px">Claude Sonnet, Wort-IDs</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px">wartet</span></div>
+          <div style="color: #A1A1AA; font-size: 12px">Geschätzt 5 Blöcke à 2.000 Wörter · etwa 0,04 €</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; opacity: 0.7">
+        <div style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #3f3f46; box-sizing: border-box; flex-shrink: 0; color: #A1A1AA; font-size: 12px; display: flex; align-items: center; justify-content: center">4</div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 4 · Fusion und Snapping</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px">wartet</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; opacity: 0.7">
+        <div style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #3f3f46; box-sizing: border-box; flex-shrink: 0; color: #A1A1AA; font-size: 12px; display: flex; align-items: center; justify-content: center">5</div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 10px; align-items: baseline"><span style="font-weight: 600">Stufe 5 · Review vorbereiten</span><span style="margin-left: auto; color: #A1A1AA; font-size: 12px">wartet</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap">
+        <button type="button" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; cursor: pointer">Nur Stufe 1b neu laufen</button>
+        <button type="button" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3f3f46; background: transparent; color: #ECEDEE; font: inherit; cursor: pointer">Semantik überspringen</button>
+      </div>
+    </section>
+
+    <!-- Log + Ressourcen -->
+    <div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+      <section aria-label="Ressourcen" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <div style="background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #A1A1AA"><span>GPU</span><span style="color: #ECEDEE; font-weight: 600">94 %</span></div>
+          <div style="height: 6px; border-radius: 999px; background: #27272a; overflow: hidden"><div style="width: 94%; height: 100%; background: #338EF7"></div></div>
+        </div>
+        <div style="background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #A1A1AA"><span>VRAM</span><span style="color: #ECEDEE; font-weight: 600">18,3 / 24 GB</span></div>
+          <div style="height: 6px; border-radius: 999px; background: #27272a; overflow: hidden"><div style="width: 76%; height: 100%; background: #F5A524"></div></div>
+        </div>
+        <div style="background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #A1A1AA"><span>Geschwindigkeit</span><span style="color: #ECEDEE; font-weight: 600">11,4× Echtzeit</span></div>
+          <div style="height: 6px; border-radius: 999px; background: #27272a; overflow: hidden"><div style="width: 57%; height: 100%; background: #17C964"></div></div>
+        </div>
+      </section>
+
+      <section aria-label="Live-Log" style="flex: 1; background: #0f0f12; border: 1px solid #27272a; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 360px">
+        <div style="box-sizing: border-box; padding: 10px 14px; border-bottom: 1px solid #27272a; display: flex; align-items: center; gap: 10px">
+          <span style="font-weight: 600">Live-Log</span>
+          <span style="color: #A1A1AA; font-size: 12px">JSON-Lines, dieselben wie im CLI</span>
+          <label style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #A1A1AA; cursor: pointer"><input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #006FEE">automatisch scrollen</label>
+        </div>
+        <div style="flex: 1; box-sizing: border-box; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; color: #A1A1AA; overflow: hidden">
+          <div><span style="color: #52525b">11:14:02</span> <span style="color: #45D483">done</span> stage=technical scenes=31 silences=214 took=58.1s</div>
+          <div><span style="color: #52525b">11:14:03</span> <span style="color: #338EF7">start</span> stage=events model=rtmpose fps=5</div>
+          <div><span style="color: #52525b">11:15:40</span> <span style="color: #A1A1AA">info</span> events.candidates=7 (motion=5, music=1, persons_changed=1)</div>
+          <div><span style="color: #52525b">11:16:31</span> <span style="color: #A1A1AA">info</span> xclip window=00:41:12-00:41:14 top="person laughing" 0.83</div>
+          <div><span style="color: #52525b">11:16:58</span> <span style="color: #F5A524">warn</span> xclip window=00:52:40 ambiguous 0.55 → vision_llm (1/40)</div>
+          <div><span style="color: #52525b">11:17:20</span> <span style="color: #A1A1AA">info</span> vision_llm: "steht auf und geht zum Whiteboard" confirmed=standing_up</div>
+          <div><span style="color: #52525b">11:17:24</span> <span style="color: #45D483">done</span> stage=events confirmed=2 candidates=5 took=201.3s</div>
+          <div><span style="color: #52525b">11:17:24</span> <span style="color: #338EF7">start</span> stage=transcribe model=large-v3 device=cuda compute=float16 lang=de</div>
+          <div><span style="color: #52525b">11:17:25</span> <span style="color: #A1A1AA">info</span> chunks=8 overlap=30s vad=on</div>
+          <div><span style="color: #52525b">11:18:41</span> <span style="color: #A1A1AA">info</span> chunk=1/8 words=1104 rtf=0.09</div>
+          <div><span style="color: #52525b">11:19:55</span> <span style="color: #A1A1AA">info</span> chunk=2/8 words=1187 rtf=0.09</div>
+          <div><span style="color: #52525b">11:21:08</span> <span style="color: #A1A1AA">info</span> chunk=3/8 words=1096 rtf=0.08</div>
+          <div><span style="color: #52525b">11:22:19</span> <span style="color: #A1A1AA">info</span> chunk=4/8 words=1142 rtf=0.09 · align 1-3 done</div>
+          <div><span style="color: #52525b">11:23:30</span> <span style="color: #A1A1AA">info</span> chunk=5/8 words=1083 rtf=0.09</div>
+          <div><span style="color: #338EF7">▌</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
