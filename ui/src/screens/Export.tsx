@@ -8,10 +8,11 @@ import { basename, dirname, fmtDuration, fmtPercent } from "../lib/format";
 import { REASON_COLOR, REASON_LABEL } from "../lib/reasons";
 import { navigate } from "../lib/router";
 
-type Format = "fcpxml" | "otio" | "edl" | "preview";
+type Format = "fcpxml" | "markers-edl" | "otio" | "edl" | "preview";
 
 const FORMATS: { id: Format; title: string; hint: string; tag?: string }[] = [
-  { id: "fcpxml", title: "FCPXML", hint: "DaVinci Resolve Import. Behält Marker und Clipnamen.", tag: "Empfohlen" },
+  { id: "fcpxml", title: "FCPXML", hint: "DaVinci Resolve Import: Timeline mit Clipnamen. Marker übernimmt Resolve hieraus nicht.", tag: "Empfohlen" },
+  { id: "markers-edl", title: "Marker-EDL (Resolve)", hint: "Die offenen Cuts als farbige Timeline-Marker, zusätzlich zur FCPXML importieren.", tag: "Resolve" },
   { id: "otio", title: "OpenTimelineIO", hint: "Kanonisches Format. Für Pipelines, Agenten und andere Werkzeuge." },
   { id: "edl", title: "EDL (CMX 3600)", hint: "Fallback für jedes Schnittprogramm. Keine Marker, keine Namen." },
   { id: "preview", title: "Vorschau-Render (MP4)", hint: "ffmpeg schneidet den Proxy direkt. Zum Gegenhören, kein Ersatz für Resolve." },
@@ -27,7 +28,7 @@ export function Export({ hash }: { hash: string }) {
 
   const media = project.data?.media;
   const stem = media ? basename(media.path).replace(/\.[^.]+$/, "") : "export";
-  const defaultOut = media ? `${dirname(media.path)}\\${stem}_visualcut.${format === "preview" ? "mp4" : format}` : "";
+  const defaultOut = media ? `${dirname(media.path)}\\${stem}_visualcut.${format === "preview" ? "mp4" : format === "markers-edl" ? "markers.edl" : format}` : "";
 
   const stats = useMemo(() => {
     const list = cuts.data?.cuts ?? [];
@@ -211,7 +212,8 @@ export function Export({ hash }: { hash: string }) {
               <ol className="list-decimal space-y-1 pl-5 text-text-muted">
                 <li>Datei → Import → Timeline, die FCPXML wählen.</li>
                 <li>Originaldatei relinken, falls gefragt.</li>
-                <li>Marker sind die offenen Cuts.</li>
+                <li>Marker-EDL exportieren, dann im Media Pool Rechtsklick auf die Timeline → Timelines → Import → Timeline Markers from EDL.</li>
+                <li>Die farbigen Marker sind die offenen Cuts, Farbe nach Grund.</li>
               </ol>
             </Card.Content>
           </Card>

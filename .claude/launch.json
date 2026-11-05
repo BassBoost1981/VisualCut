@@ -4,8 +4,23 @@
     {
       "name": "ui-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "ui", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "ui",
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "serve",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "visualcut",
+        "serve"
+      ],
+      "port": 8765
     }
   ]
 }

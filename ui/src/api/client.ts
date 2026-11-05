@@ -35,7 +35,7 @@ export interface CutList {
 }
 
 export interface ExportRequest {
-  format: "fcpxml" | "edl" | "otio";
+  format: "fcpxml" | "markers-edl" | "edl" | "otio";
   out?: string | null;
   open_as_cut?: boolean;
 }
