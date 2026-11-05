@@ -347,3 +347,19 @@ def test_api_catalog_roundtrip_keeps_header(analyzed: ProjectCache, tmp_path: Pa
     assert client.put("/events/catalog", json=bad).status_code == 422  # doppelter Typ
     r = client.get(f"/projects/{analyzed.hash}/events", params={"pending": True}).json()
     assert r["count"] == 0 and r["windows"] == [] and r["instructions_path"].endswith("vision_event_v1.md")
+
+
+def test_highlight_aligned_to_silent_event_after_last_word():
+    """Event ohne Sprache hinter dem letzten Wort: Stufe 3 sieht es als "zwischen Wort 5 und 5" und meldet 5..5."""
+    words = [Word(id=i, text=f"w{i}", start=i * 0.5, end=i * 0.5 + 0.4) for i in range(6)]
+    dance = ev("dancing", 11.4, 188.2)
+    [a] = align_highlights([Highlight(start_word=5, end_word=5, score=0.9)], words, [dance], 60.0, 199.0)
+    assert a.event_ids == [dance.id] and 10.9 - 1 / 60 < a.start <= 10.9 and a.end == pytest.approx(188.2, abs=1 / 60)
+
+
+def test_only_highlight_events_anchor_highlights():
+    words = [Word(id=i, text=f"w{i}", start=i * 0.5, end=i * 0.5 + 0.4) for i in range(6)]
+    events = [ev("dancing", 11.4, 188.2), ev("empty_frame", 189.2, 199.0, effect=EventEffect.cut),
+              ev("music", 0.0, 190.0, effect=EventEffect.marker)]
+    [a] = align_highlights([Highlight(start_word=5, end_word=5, score=0.9)], words, events, 60.0, 199.0)
+    assert a.event_ids == ["ev-dancing-11.4"] and a.end == pytest.approx(188.2, abs=1 / 60)

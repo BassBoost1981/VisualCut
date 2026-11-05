@@ -20,7 +20,7 @@ Phase 4 (Stufe 1b) ist umgesetzt, lokal auf `main`. Abweichungen und Befunde:
 - **Ebene C hat zwei Wege wie Stufe 3:** Claude mit Einzelbildern, wenn `ANTHROPIC_API_KEY` gesetzt ist, sonst beurteilt der steuernde Agent die offenen Fenster (`visualcut events --judge`, MCP `judge_events`). Gemini ist nicht eingebaut.
 - **Wirkung `cut` blockiert Regel 8 nicht:** Bei einem Schnitt-Kandidaten (Trinkpause, niemand im Bild) darf geschnitten werden. Kandidaten blockieren ebenfalls nicht, nur bestätigte Events.
 - **Pose auf der CPU** (etwa 15 ms pro Frame), weil `onnxruntime-gpu` mit dem `onnxruntime` von faster-whisper kollidiert. CLAP, X-CLIP und VideoMAE laufen auf der GPU.
-- **Erfolgskriterien:** Das Talking-Head-Video liefert kein Tanz-Event, das Tanzvideo ein bestätigtes ab 11,4 s. Ob das auf ±500 ms stimmt, ist ohne handannotierten Sollwert nicht geprüft. Ob das LLM das Tanz-Event als Highlight nennt, ist ohne Lauf von Stufe 3 auf dem Tanzvideo nicht geprüft.
+- **Erfolgskriterien:** Das Talking-Head-Video liefert kein Tanz-Event, das Tanzvideo ein bestätigtes ab 11,4 s. Ob das auf ±500 ms stimmt, ist ohne handannotierten Sollwert nicht geprüft. Mit Stufe 3 über den steuernden Agenten (Weg A) wird das Tanz-Event zum Highlight von 10,9 bis 188,2 s (500 ms Vorlauf); ob Claude über die API es von sich aus nennt, ist ohne API-Key nicht geprüft.
 
 Offen: Phase 5 (Verfeinerung). Die Review-Schleife mit Stilprofil und `visualcut diff` existiert noch nicht. Die Desktop-Exe bündelt die Modelle von Stufe 1b noch nicht.
 

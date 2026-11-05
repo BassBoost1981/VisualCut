@@ -60,7 +60,7 @@ Erkennt, *was* im Bild und im Ton passiert. Drei Ebenen, Modelle nacheinander ge
 
 Weitergabe:
 - **Stufe 3:** bekommt die Events pro Block als Wort-ID-Spannen, bei Weg B im Prompt `semantic_v2.md` unter `## Ereignisse`, bei Weg A im Feld `events` von `get_transcript` bzw. `visualcut transcript`. Ohne Sprache im Event zählen das Wort davor und das danach, mit `spoken=false`.
-- **Stufe 4, Regel 8:** Ein Cut, der ganz in einem bestätigten Event liegt, entfällt. Ragt er hinein, endet er am Event-Start bzw. beginnt am Event-Ende, aus angeschnittenen Wörtern herausgeschoben. Events mit Wirkung `cut` und Kandidaten blockieren nicht. Highlights aus Stufe 3, die ein bestätigtes Event berühren, umfassen das ganze Event und beginnen 500 ms vor ihm.
+- **Stufe 4, Regel 8:** Ein Cut, der ganz in einem bestätigten Event liegt, entfällt. Ragt er hinein, endet er am Event-Start bzw. beginnt am Event-Ende, aus angeschnittenen Wörtern herausgeschoben. Events mit Wirkung `cut` und Kandidaten blockieren nicht. Highlights aus Stufe 3, die ein bestätigtes Event mit Wirkung `highlight` zeitlich berühren, umfassen Highlight und Event und beginnen spätestens 500 ms vor dem Event. Enthält das Highlight nur die Wortspanne eines Events ohne Sprache (z. B. Tanz nach dem letzten Wort, „zwischen Wort 5 und 5"), ist der Clip das Event mit 500 ms Vorlauf.
 - **Export:** bestätigte Events als grüne Marker (FCPXML und `markers-edl`), Kandidaten nicht.
 
 Kalibrierung (2026-11-05, Tanzvideo und Twitch-Talking-Head): Ganzkörper- und Rumpfenergie trennen Tanzen und Gestikulieren nicht, die Unterkörperenergie schon (Schwelle 0,08, Unterkörper in 50 % der Samples sichtbar).

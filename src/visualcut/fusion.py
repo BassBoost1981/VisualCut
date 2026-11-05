@@ -220,17 +220,35 @@ def align_highlights(highlights: list[Highlight], words: list[Word], events: lis
     und beginnt 500 ms vor dem Event-Start, damit man sieht, wie es anfängt. Sekunden kommen aus Wörtern und Events."""
     import math
 
+    from .events.words import word_span
+
     by_id = {w.id: w for w in words}
-    anchors = [e for e in events or [] if e.status == EventStatus.confirmed]
+    # nur bestätigte Highlight-Events: ein Musik-Marker oder ein leerer Raum soll keinen Clip verlängern
+    anchors = [e for e in events or [] if e.status == EventStatus.confirmed and e.effect == EventEffect.highlight]
+    spans = {ev.id: word_span(ev, words) for ev in anchors}
     out: list[Highlight] = []
     for h in highlights:
         if h.start_word not in by_id or h.end_word not in by_id:
             continue
         s, e = by_id[h.start_word].start, by_id[h.end_word].end
-        hit = [ev for ev in anchors if ev.start < e + HIGHLIGHT_TOUCH and ev.end > s - HIGHLIGHT_TOUCH]
-        if hit:
+
+        def in_time(ev: Event) -> bool:
+            return ev.start < e + HIGHLIGHT_TOUCH and ev.end > s - HIGHLIGHT_TOUCH
+
+        def in_words(ev: Event) -> bool:
+            # die Wort-ID-Spanne, mit der Stufe 3 das Event gesehen hat, liegt im Highlight (ein Event ohne Sprache
+            # nach dem letzten Wort erscheint dort als "zwischen Wort N und N")
+            sp = spans.get(ev.id)
+            return sp is not None and h.start_word <= sp[0] and sp[1] <= h.end_word
+
+        timed = [ev for ev in anchors if in_time(ev)]
+        hit = timed + [ev for ev in anchors if ev not in timed and in_words(ev)]
+        if timed:  # Highlight und Event überlappen: der Clip umfasst beides
             s = min(s, min(ev.start for ev in hit) - EVENT_LEAD)
             e = max(e, max(ev.end for ev in hit))
+        elif hit:  # nur über die Wortspanne: der Clip ist das Event selbst
+            s = min(ev.start for ev in hit) - EVENT_LEAD
+            e = max(ev.end for ev in hit)
         s = max(0.0, s)
         if duration > 0:
             e = min(duration, e)

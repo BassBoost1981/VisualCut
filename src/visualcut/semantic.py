@@ -187,6 +187,8 @@ def fingerprint(result: SemanticResult | None) -> str | None:
     h = hashlib.sha1(result.model.encode())
     for c in sorted(result.cuts, key=lambda c: (c.start_word, c.end_word, c.reason.value)):
         h.update(f"{c.start_word}:{c.end_word}:{c.reason.value}:{c.confidence}".encode())
+    for hl in sorted(result.highlights, key=lambda x: (x.start_word, x.end_word)):  # die Fusion richtet sie aus
+        h.update(f"h{hl.start_word}:{hl.end_word}:{hl.score}".encode())
     return h.hexdigest()[:16]
 
 

@@ -126,7 +126,7 @@ def fuse_events(result: EventsResult, catalog: EventCatalog) -> list[Event]:
             sources = sorted({s for m in members for s in m.sources})
             has_c = any(layer(s) == "C" for s in sources)
             start, end = min(m.start for m in members), max(m.end for m in members)
-            if not has_c and any(t in cand and min(end, ve) - max(start, vs) > 0.5 * (end - start)
+            if not has_c and any(t in cand and min(end, ve) - max(start, vs) >= 0.5 * (end - start)
                                  for vs, ve, cand in vetoes):
                 continue                                                         # Veto aus Ebene C
             confirmed = len(sources) >= 2 or has_c                               # Regel 2
