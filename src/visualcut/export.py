@@ -138,10 +138,56 @@ def to_fcpxml(tl: otio.schema.Timeline) -> bytes:
     return b'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fcpxml>\n' + ET.tostring(root, encoding="utf-8")
 
 
+# ---------------------------------------------------------------- Marker-EDL für DaVinci Resolve
+
+RESOLVE_MARKER_COLORS = {
+    "filler": "Yellow", "retake": "Red", "long_pause": "Cyan", "tangent": "Purple",
+    "false_start": "Pink", "redundant": "Lemon", "technical": "Cream",
+}
+FORMATS = ("fcpxml", "edl", "otio", "markers-edl")
+
+
+def _tc(frames: int, fps: float) -> str:
+    f = int(round(fps))
+    h, rem = divmod(frames, 3600 * f)
+    m, rem = divmod(rem, 60 * f)
+    sec, fr = divmod(rem, f)
+    return f"{h:02d}:{m:02d}:{sec:02d}:{fr:02d}"
+
+
+def to_marker_edl(tl: otio.schema.Timeline) -> str:
+    """Timeline-Marker im EDL-Format, das Resolve unter Timeline > Import > Timeline Markers from EDL liest.
+    Ein Event pro Marker, darunter die Zeile `|C:ResolveColor<Farbe> |M:<Name> |D:<Dauer in Frames>`.
+    FCPXML transportiert keine Marker-Farben, darum dieser Weg."""
+    meta = dict(tl.metadata.get("visualcut", {}))
+    fps = float(meta.get("fps", 25.0))
+    lines = [f"TITLE: {tl.name}", "FCM: NON-DROP FRAME", ""]
+    n = 0
+    offset = otio.opentime.RationalTime(0, fps)
+    for clip in tl.tracks[0]:
+        sr = clip.source_range
+        for m in clip.markers:
+            tl_start = offset + (m.marked_range.start_time - sr.start_time)
+            start = round(tl_start.rescaled_to(fps).value)
+            dur = max(1, round(m.marked_range.duration.rescaled_to(fps).value))
+            reason = (m.metadata.get("visualcut") or {}).get("reason", "")
+            color = RESOLVE_MARKER_COLORS.get(reason, "Blue")
+            n += 1
+            lines.append(f"{n:03d}  001      V     C        {_tc(start, fps)} {_tc(start + 1, fps)} {_tc(start, fps)} {_tc(start + 1, fps)}")
+            name = m.name.replace("|", "/")  # `|` trennt in Resolves EDL die Felder
+            lines.append(f" |C:ResolveColor{color} |M:{name} |D:{dur}")
+            lines.append("")
+        offset += sr.duration
+    return "\n".join(lines) + "\n"
+
+
 def write(tl: otio.schema.Timeline, out: Path, fmt: str) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     if fmt == "fcpxml":
         out.write_bytes(to_fcpxml(tl))
+        return out
+    if fmt == "markers-edl":
+        out.write_text(to_marker_edl(tl), encoding="utf-8", newline="\r\n")
         return out
     adapter = {"edl": "cmx_3600", "otio": "otio_json"}[fmt]
     otio.adapters.write_to_file(tl, str(out), adapter_name=adapter)

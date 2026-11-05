@@ -31,7 +31,7 @@ class ExportResult(BaseModel):
 
 @router.post("/export", response_model=ExportResult)
 def export(content_hash: str, body: ExportRequest) -> ExportResult:
-    if body.format not in ("fcpxml", "edl", "otio"):
+    if body.format not in export_mod.FORMATS:
         raise HTTPException(422, f"Unbekanntes Format {body.format}")
     a = get_analysis_or_404(content_hash)
     cache = get_cache_or_404(content_hash)

@@ -22,6 +22,7 @@ visualcut cuts input.mp4 --json --min-confidence 0.7 --reason retake --reason ta
 visualcut decide input.mp4 <cut-id> accepted|rejected|open --note "..."
 visualcut export input.mp4 --format fcpxml --out schnitt.fcpxml
 visualcut export input.mp4 --format edl --out schnitt.edl
+visualcut export input.mp4 --format markers-edl --out marker.edl   # Resolve: Timeline > Import > Timeline Markers from EDL (mit Farben)
 visualcut render input.mp4 --out preview.mp4   # ffmpeg-Vorschau ohne die angenommenen Cuts (--open-as-cut: auch offene)
 visualcut schema                               # JSON-Schema aller Ausgaben
 visualcut serve                                # FastAPI auf http://localhost:8765

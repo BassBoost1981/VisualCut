@@ -102,8 +102,10 @@ def decide(path: str, cut_id: str, status: CutStatus, note: str = "") -> dict[st
 @tool
 def export(path: str, format: str = "fcpxml", out: str | None = None, open_as_cut: bool = False) -> dict[str, Any]:
     """Schnittliste schreiben (fcpxml für DaVinci Resolve, edl, otio). Angenommene Cuts werden geschnitten,
-    offene als Marker gesetzt (open_as_cut=True: auch geschnitten), verworfene ignoriert. Gibt den Pfad zurück."""
-    if format not in ("fcpxml", "edl", "otio"):
+    offene als Marker gesetzt (open_as_cut=True: auch geschnitten), verworfene ignoriert. Gibt den Pfad zurück.
+    format="markers-edl": nur die Marker mit Farben, für Resolve "Timeline > Import > Timeline Markers from EDL"
+    auf die bereits importierte FCPXML-Timeline (Resolve übernimmt Marker aus FCPXML nicht)."""
+    if format not in export_mod.FORMATS:
         raise ValueError(f"Unbekanntes Format {format}")
     video = _video(path)
     cache, analysis = pipeline.require_analysis(video)

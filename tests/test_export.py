@@ -106,3 +106,17 @@ def test_decisions_roundtrip(analyzed: ProjectCache):
     assert applied[0].status == CutStatus.rejected and applied[1].status == CutStatus.open
     decisions_mod.set_status(analyzed, cuts[0].id, CutStatus.open)
     assert decisions_mod.load(analyzed).items == []
+
+
+def test_marker_edl_for_resolve(analyzed: ProjectCache, tmp_path: Path):
+    media, cuts = _load(analyzed)
+    tl = export_mod.build_timeline(media, cuts, include_open=False)
+    text = export_mod.write(tl, tmp_path / "m.edl", "markers-edl").read_text(encoding="utf-8")
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    assert lines[0].startswith("TITLE:") and lines[1] == "FCM: NON-DROP FRAME"
+    events = [ln for ln in lines if re.match(r"^\d{3}  001      V     C        \d\d:\d\d:\d\d:\d\d ", ln)]
+    markers = [ln for ln in lines if ln.startswith(" |C:ResolveColor") and " |M:" in ln and " |D:" in ln]
+    assert len(events) == len(markers) == len(cuts)
+    first_tc = events[0].split()[4]
+    h, m, s_, f = (int(x) for x in first_tc.split(":"))
+    assert abs((h * 3600 + m * 60 + s_ + f / media.fps) - cuts[0].start) < 1 / media.fps + 1e-6

@@ -150,7 +150,7 @@ def decide(
 @app.command()
 def export(
     video: VideoArg,
-    format: Annotated[str, typer.Option("--format", help="fcpxml, edl oder otio")] = "fcpxml",
+    format: Annotated[str, typer.Option("--format", help="fcpxml, edl, otio oder markers-edl (Resolve: Timeline-Marker mit Farben)")] = "fcpxml",
     out: Annotated[Path | None, typer.Option("--out")] = None,
     open_as_cut: Annotated[bool, typer.Option("--open-as-cut", help="Offene Cuts schneiden statt als Marker setzen")] = False,
     json_: JsonFlag = False,
@@ -159,10 +159,10 @@ def export(
     """Schnittliste schreiben. Angenommene Cuts werden geschnitten, offene als Marker gesetzt, verworfene ignoriert."""
 
     def go():
-        if format not in ("fcpxml", "edl", "otio"):
+        if format not in export_mod.FORMATS:
             raise ValueError(f"Unbekanntes Format {format}")
         cache, analysis = pipeline.require_analysis(video, cache_dir)
-        target = out or cache.path(f"{video.stem}.{format}")
+        target = out or cache.path(f"{video.stem}.{format.replace('markers-edl', 'markers.edl')}")
         tl = export_mod.build_timeline(analysis.media, analysis.cuts, include_open=open_as_cut)
         export_mod.write(tl, target, format)
         to_cut, to_mark = decisions_mod.for_export(analysis.cuts, open_as_cut)
