@@ -196,6 +196,7 @@ export function Export({ hash }: { hash: string }) {
                       {"clips" in result && (
                         <span className="mt-1 block text-xs text-text-muted">
                           {result.clips} Clips · {result.cuts_applied} Schnitte · {result.markers} Marker
+                          {result.event_markers ? ` · ${result.event_markers} Event-Marker` : ""}
                         </span>
                       )}
                     </Alert.Description>

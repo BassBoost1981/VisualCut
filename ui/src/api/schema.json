@@ -22,10 +22,29 @@
           ],
           "default": null
         },
+        "events": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "title": "Events",
+          "type": "array"
+        },
         "speech": {
           "anyOf": [
             {
               "$ref": "#/$defs/SpeechResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "semantic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticResult"
             },
             {
               "type": "null"
@@ -41,6 +60,15 @@
           "title": "Cuts",
           "type": "array"
         },
+        "highlights": {
+          "default": [],
+          "description": "Highlights mit Sekunden, nach Fusion",
+          "items": {
+            "$ref": "#/$defs/Highlight"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
         "stages_done": {
           "default": [],
           "items": {
@@ -54,6 +82,32 @@
         "media"
       ],
       "title": "Analysis",
+      "type": "object"
+    },
+    "Chapter": {
+      "description": "Stufe 3: inhaltlicher Abschnitt, nur Wort-IDs.",
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "start_word": {
+          "minimum": 0,
+          "title": "Start Word",
+          "type": "integer"
+        },
+        "end_word": {
+          "minimum": 0,
+          "title": "End Word",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "title",
+        "start_word",
+        "end_word"
+      ],
+      "title": "Chapter",
       "type": "object"
     },
     "Cut": {
@@ -240,6 +294,468 @@
         "content_hash"
       ],
       "title": "Decisions",
+      "type": "object"
+    },
+    "Event": {
+      "description": "Ein Ereignis aus Stufe 1b. Sekunden kommen aus der Erkennung, nie von einem LLM.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "sources": {
+          "default": [],
+          "description": "pose, clap, xclip, videomae, vision, agent:<name>",
+          "items": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/EventStatus",
+          "default": "candidate"
+        },
+        "effect": {
+          "$ref": "#/$defs/EventEffect",
+          "default": "marker"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "start",
+        "end",
+        "confidence"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "EventCatalog": {
+      "description": "events.yaml: Liste der erkennbaren Ereignisse, pro Projekt überschreibbar.",
+      "properties": {
+        "version": {
+          "default": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "vision_budget": {
+          "default": 40,
+          "description": "Maximale Vision-LLM-Aufrufe pro Video (Ebene C)",
+          "minimum": 0,
+          "title": "Vision Budget",
+          "type": "integer"
+        },
+        "events": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EventDefinition"
+          },
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "title": "EventCatalog",
+      "type": "object"
+    },
+    "EventDefinition": {
+      "description": "Ein Eintrag in events.yaml.",
+      "properties": {
+        "type": {
+          "description": "Stabiler Schlüssel, z. B. dancing",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Type",
+          "type": "string"
+        },
+        "label": {
+          "description": "Anzeigename",
+          "title": "Label",
+          "type": "string"
+        },
+        "prompt": {
+          "default": "",
+          "description": "Text für X-CLIP (Zero-Shot), leer = kein Bild-Prompt",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "audio_prompt": {
+          "default": "",
+          "description": "Text für CLAP (Zero-Shot), leer = kein Audio-Prompt",
+          "title": "Audio Prompt",
+          "type": "string"
+        },
+        "kinetics": {
+          "default": [],
+          "description": "Teilstrings von Kinetics-400-Klassen, die VideoMAE als Bestätigung zählt",
+          "items": {
+            "type": "string"
+          },
+          "title": "Kinetics",
+          "type": "array"
+        },
+        "effect": {
+          "$ref": "#/$defs/EventEffect",
+          "default": "marker"
+        },
+        "background": {
+          "default": false,
+          "description": "Nur Vergleichsklasse für X-CLIP/CLAP, erzeugt kein Event",
+          "title": "Background",
+          "type": "boolean"
+        },
+        "motion": {
+          "default": false,
+          "description": "Grenzen aus der Pose-Bewegungsenergie verfeinern",
+          "title": "Motion",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "label"
+      ],
+      "title": "EventDefinition",
+      "type": "object"
+    },
+    "EventEffect": {
+      "description": "Wirkung eines Event-Typs: Highlight-Kandidat, nur Marker, oder Schnitt-Kandidat.",
+      "enum": [
+        "highlight",
+        "marker",
+        "cut"
+      ],
+      "title": "EventEffect",
+      "type": "string"
+    },
+    "EventJudgment": {
+      "description": "Urteil zu einem Fenster: ein Typ aus events.yaml oder `none`. Keine Zeitangaben, die kommen aus dem Fenster.",
+      "properties": {
+        "window_id": {
+          "title": "Window Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "window_id",
+        "type",
+        "confidence"
+      ],
+      "title": "EventJudgment",
+      "type": "object"
+    },
+    "EventJudgments": {
+      "description": "Einreichung von Ebene C durch den steuernden Agenten (`visualcut events --judge`).",
+      "properties": {
+        "source": {
+          "default": "agent",
+          "title": "Source",
+          "type": "string"
+        },
+        "judgments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EventJudgment"
+          },
+          "title": "Judgments",
+          "type": "array"
+        }
+      },
+      "title": "EventJudgments",
+      "type": "object"
+    },
+    "EventStatus": {
+      "enum": [
+        "confirmed",
+        "candidate"
+      ],
+      "title": "EventStatus",
+      "type": "string"
+    },
+    "EventWindow": {
+      "description": "Ein unklares Fenster für Ebene C (Vision-LLM oder der steuernde Agent).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "candidates": {
+          "default": [],
+          "description": "Event-Typen, um die es geht",
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        },
+        "frames": {
+          "default": [],
+          "description": "JPEG-Pfade im Cache, 4 bis 8 Frames",
+          "items": {
+            "type": "string"
+          },
+          "title": "Frames",
+          "type": "array"
+        },
+        "judged_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Judged By"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end"
+      ],
+      "title": "EventWindow",
+      "type": "object"
+    },
+    "EventsResult": {
+      "description": "Stufe 1b, entspricht events.json.",
+      "properties": {
+        "events": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "detections": {
+          "default": [],
+          "description": "Rohdetektionen pro Quelle, vor der Fusion",
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "windows": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EventWindow"
+          },
+          "title": "Windows",
+          "type": "array"
+        },
+        "judgments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EventJudgment"
+          },
+          "title": "Judgments",
+          "type": "array"
+        },
+        "motion": {
+          "default": [],
+          "description": "Bewegungsenergie der Hauptperson pro Pose-Sample",
+          "items": {
+            "type": "number"
+          },
+          "title": "Motion",
+          "type": "array"
+        },
+        "motion_lower": {
+          "default": [],
+          "description": "Unterkörperenergie pro Pose-Sample, 0 wenn nicht sichtbar",
+          "items": {
+            "type": "number"
+          },
+          "title": "Motion Lower",
+          "type": "array"
+        },
+        "motion_fps": {
+          "default": 5,
+          "title": "Motion Fps",
+          "type": "number"
+        },
+        "layers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Ebene/Modell -> ok oder Grund fürs Überspringen",
+          "title": "Layers",
+          "type": "object"
+        },
+        "vision_calls": {
+          "default": 0,
+          "title": "Vision Calls",
+          "type": "integer"
+        },
+        "vision_budget": {
+          "default": 40,
+          "title": "Vision Budget",
+          "type": "integer"
+        },
+        "detection_hash": {
+          "default": "",
+          "description": "Hash der erkennungsrelevanten Felder aus events.yaml",
+          "title": "Detection Hash",
+          "type": "string"
+        }
+      },
+      "title": "EventsResult",
+      "type": "object"
+    },
+    "Flag": {
+      "properties": {
+        "word": {
+          "minimum": 0,
+          "title": "Word",
+          "type": "integer"
+        },
+        "type": {
+          "description": "z. B. unclear_audio, name_unclear, fact_check",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "word",
+        "type"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "Highlight": {
+      "properties": {
+        "start_word": {
+          "minimum": 0,
+          "title": "Start Word",
+          "type": "integer"
+        },
+        "end_word": {
+          "minimum": 0,
+          "title": "End Word",
+          "type": "integer"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "hook": {
+          "default": "",
+          "title": "Hook",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sekunden, nach Fusion (an Event-Grenzen ausgerichtet)",
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "event_ids": {
+          "default": [],
+          "description": "Events, an denen der Clip ausgerichtet wurde",
+          "items": {
+            "type": "string"
+          },
+          "title": "Event Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "start_word",
+        "end_word",
+        "score"
+      ],
+      "title": "Highlight",
       "type": "object"
     },
     "MediaInfo": {
@@ -455,6 +971,66 @@
       "title": "SceneChange",
       "type": "object"
     },
+    "SemanticResult": {
+      "description": "Stufe 3: validierte LLM-Ausgabe. Cuts haben source=llm und nur Wort-IDs, keine Sekunden.",
+      "properties": {
+        "chapters": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Chapter"
+          },
+          "title": "Chapters",
+          "type": "array"
+        },
+        "cuts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Cut"
+          },
+          "title": "Cuts",
+          "type": "array"
+        },
+        "highlights": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Highlight"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "flags": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Flag"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "model": {
+          "default": "",
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "default": "",
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "blocks": {
+          "default": 0,
+          "title": "Blocks",
+          "type": "integer"
+        },
+        "rejected": {
+          "default": 0,
+          "description": "Verworfene Einträge (ungültige IDs, Grenzen, Werte)",
+          "title": "Rejected",
+          "type": "integer"
+        }
+      },
+      "title": "SemanticResult",
+      "type": "object"
+    },
     "SilenceInterval": {
       "properties": {
         "start": {
@@ -519,7 +1095,9 @@
       "enum": [
         "ingest",
         "technical",
+        "events",
         "speech",
+        "semantic",
         "fusion"
       ],
       "title": "Stage",
@@ -622,6 +1200,15 @@
     },
     {
       "$ref": "#/$defs/Cut"
+    },
+    {
+      "$ref": "#/$defs/EventCatalog"
+    },
+    {
+      "$ref": "#/$defs/EventsResult"
+    },
+    {
+      "$ref": "#/$defs/EventJudgments"
     }
   ]
 }

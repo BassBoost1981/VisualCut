@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type CutList } from "./client";
-import type { CutStatus } from "./types";
+import type { CutStatus, EventCatalog } from "./types";
 
 export const keys = {
   health: ["health"] as const,
@@ -8,12 +8,23 @@ export const keys = {
   project: (hash: string) => ["project", hash] as const,
   cuts: (hash: string) => ["cuts", hash] as const,
   job: (id: string) => ["job", id] as const,
+  catalog: ["catalog"] as const,
 };
 
 export const useHealth = () => useQuery({ queryKey: keys.health, queryFn: api.health, retry: false, refetchInterval: 15000 });
 export const useProjects = () => useQuery({ queryKey: keys.projects, queryFn: api.listProjects });
 export const useProject = (hash: string) => useQuery({ queryKey: keys.project(hash), queryFn: () => api.getProject(hash) });
 export const useCuts = (hash: string) => useQuery({ queryKey: keys.cuts(hash), queryFn: () => api.getCuts(hash) });
+export const useCatalog = () => useQuery({ queryKey: keys.catalog, queryFn: api.getCatalog });
+
+/** PUT /events/catalog: schreibt die globale events.yaml. */
+export function useSaveCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (catalog: EventCatalog) => api.putCatalog(catalog),
+    onSuccess: (info) => qc.setQueryData(keys.catalog, info),
+  });
+}
 
 /** PUT /decisions/{cut_id}, optimistisch in der Cut-Liste gespiegelt, danach neu geladen. */
 export function useDecide(hash: string) {

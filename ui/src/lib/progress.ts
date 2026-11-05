@@ -20,7 +20,7 @@ export interface JobProgress {
   error: string | null;
 }
 
-export const STAGES: Stage[] = ["ingest", "technical", "speech", "fusion"];
+export const STAGES: Stage[] = ["ingest", "technical", "events", "speech", "semantic", "fusion"];
 
 function emptyStages(): Record<Stage, StageProgress> {
   return Object.fromEntries(STAGES.map((s) => [s, { state: "pending", percent: 0, message: "" }])) as Record<

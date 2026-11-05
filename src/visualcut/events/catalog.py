@@ -54,7 +54,10 @@ def load(cache: ProjectCache | None = None) -> EventCatalog:
     return parse(p.read_text(encoding="utf-8"))
 
 
-def dump(catalog: EventCatalog) -> str:
+DEFAULT_HEADER = "# VisualCut Stufe 1b: erkennbare Ereignisse. Felder siehe AGENTS.md (Stufe 1b).\n"
+
+
+def dump(catalog: EventCatalog, header: str = DEFAULT_HEADER) -> str:
     data = catalog.model_dump(mode="json")
     # Standardwerte pro Eintrag weglassen, damit die Datei lesbar bleibt
     defaults = {"prompt": "", "audio_prompt": "", "kinetics": [], "background": False, "motion": False}
@@ -62,14 +65,25 @@ def dump(catalog: EventCatalog) -> str:
         for k, v in defaults.items():
             if d.get(k) == v:
                 d.pop(k)
-    header = "# VisualCut Stufe 1b: erkennbare Ereignisse. Felder siehe AGENTS.md (Stufe 1b).\n"
     return header + yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
+
+
+def _header(path: Path) -> str:
+    """Kommentarblock am Anfang einer vorhandenen Datei (Feldbeschreibung), damit der Editor ihn nicht löscht."""
+    if not path.exists():
+        return DEFAULT_HEADER
+    lines = []
+    for line in path.read_text(encoding="utf-8").splitlines(keepends=True):
+        if not line.startswith("#") and line.strip():
+            break
+        lines.append(line)
+    return "".join(lines) or DEFAULT_HEADER
 
 
 def save(catalog: EventCatalog, path: Path | None = None) -> Path:
     target = path or global_path()
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(dump(catalog), encoding="utf-8")
+    target.write_text(dump(catalog, _header(target)), encoding="utf-8")
     return target
 
 

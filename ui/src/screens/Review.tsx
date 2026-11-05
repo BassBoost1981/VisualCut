@@ -173,7 +173,15 @@ export function Review({ hash }: { hash: string }) {
             onNextCut={() => step(1)}
           />
           {media.has_audio ? (
-            <Timeline audioUrl={mediaUrl(hash, "audio")} duration={media.duration} cuts={visible} scenes={scenes} videoRef={videoRef} currentTime={currentTime} />
+            <Timeline
+              audioUrl={mediaUrl(hash, "audio")}
+              duration={media.duration}
+              cuts={visible}
+              scenes={scenes}
+              events={a.events ?? []}
+              videoRef={videoRef}
+              currentTime={currentTime}
+            />
           ) : (
             <div className="rounded-2xl border border-line bg-panel p-4 text-sm text-text-muted">Keine Tonspur, keine Wellenform.</div>
           )}

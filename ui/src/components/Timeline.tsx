@@ -1,9 +1,10 @@
 import { Button } from "@heroui/react";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin, { type Region } from "wavesurfer.js/dist/plugins/regions.js";
-import type { Cut, SceneChange } from "../api/types";
+import type { Cut, Event, SceneChange } from "../api/types";
 import { fmtDuration } from "../lib/format";
+import { EVENT_COLOR, eventTitle } from "../lib/events";
 import { REASON_COLOR, REASON_LABEL, REASONS } from "../lib/reasons";
 import { useReview } from "../lib/review-store";
 
@@ -12,8 +13,52 @@ interface Props {
   duration: number;
   cuts: Cut[];
   scenes: SceneChange[];
+  events: Event[];
   videoRef: RefObject<HTMLVideoElement | null>;
   currentTime: number;
+}
+
+interface View {
+  start: number;
+  end: number;
+}
+
+/**
+ * Event-Spur unter der Wellenform: bestätigte Events grün gefüllt, Kandidaten gestrichelt. Die Spur liegt außerhalb
+ * von wavesurfer (Shadow DOM, Regionen über die volle Höhe) und folgt dessen sichtbarem Ausschnitt.
+ */
+function EventLane({ events, view, onPick }: { events: Event[]; view: View; onPick: (e: Event) => void }) {
+  const span = Math.max(1e-6, view.end - view.start);
+  const shown = events.filter((e) => e.end > view.start && e.start < view.end);
+  return (
+    <div aria-label="Events" role="list" className="relative h-6 overflow-hidden rounded-md bg-panel-dark">
+      {shown.length === 0 && <span className="absolute left-2 top-1 text-[11px] text-text-faint">Events</span>}
+      {shown.map((e) => {
+        const confirmed = e.status === "confirmed";
+        const left = ((e.start - view.start) / span) * 100;
+        const width = ((e.end - e.start) / span) * 100;
+        return (
+          <button
+            key={e.id}
+            type="button"
+            role="listitem"
+            title={eventTitle(e)}
+            onClick={() => onPick(e)}
+            className="absolute top-[3px] flex h-[18px] items-center overflow-hidden whitespace-nowrap rounded px-1.5 text-[11px] font-semibold"
+            style={{
+              left: `${left}%`,
+              width: `max(${width}%, 4px)`,
+              background: confirmed ? EVENT_COLOR : "rgba(23, 201, 100, 0.15)",
+              color: confirmed ? "#052e16" : "#45D483",
+              border: confirmed ? "none" : `1px dashed ${EVENT_COLOR}`,
+            }}
+          >
+            {e.label || e.type} · {e.confidence.toFixed(2).replace(".", ",")}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -25,8 +70,9 @@ function hexToRgba(hex: string, alpha: number): string {
  * Wellenform (wavesurfer.js auf dem WAV aus Stufe 0) plus Cut-Spur als Regionen und Szenenwechsel als Marker.
  * wavesurfer spielt nichts ab: der Cursor folgt dem Video, Klick in die Wellenform spult das Video.
  */
-export function Timeline({ audioUrl, duration, cuts, scenes, videoRef, currentTime }: Props) {
+export function Timeline({ audioUrl, duration, cuts, scenes, events, videoRef, currentTime }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<View>({ start: 0, end: duration });
   const wsRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null);
   const selectedCutId = useReview((s) => s.selectedCutId);
@@ -61,6 +107,18 @@ export function Timeline({ audioUrl, duration, cuts, scenes, videoRef, currentTi
     });
     wsRef.current = ws;
     regionsRef.current = regions;
+    // Sichtbarer Ausschnitt für die Event-Spur: passt das Audio ganz hinein, streckt wavesurfer es auf die Breite
+    const updateView = () => {
+      const dur = ws.getDuration();
+      const w = el.clientWidth;
+      if (!dur || !w) return;
+      const pps = Math.max(ws.options.minPxPerSec, w / dur);
+      const start = ws.getScroll() / pps;
+      setView({ start, end: start + w / pps });
+    };
+    for (const name of ["ready", "scroll", "zoom", "redrawcomplete"] as const) ws.on(name, updateView);
+    const resize = new ResizeObserver(updateView);
+    resize.observe(el);
     ws.on("interaction", (t) => {
       const v = videoRef.current;
       if (v) v.currentTime = t;
@@ -75,6 +133,7 @@ export function Timeline({ audioUrl, duration, cuts, scenes, videoRef, currentTi
       if (v) v.currentTime = Math.max(0, (cut.start ?? 0) - 0.5);
     });
     return () => {
+      resize.disconnect();
       ws.destroy();
       wsRef.current = null;
       regionsRef.current = null;
@@ -167,6 +226,14 @@ export function Timeline({ audioUrl, duration, cuts, scenes, videoRef, currentTi
             <span className="inline-block h-2.5 w-0.5 bg-[#71717A]" />
             Szene
           </span>
+          {events.length > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: EVENT_COLOR }} />
+              Event
+              <span className="inline-block h-2.5 w-2.5 rounded-sm border border-dashed" style={{ borderColor: EVENT_COLOR }} />
+              Kandidat
+            </span>
+          )}
         </div>
         <div className="ml-auto flex items-center gap-1.5 text-xs text-text-muted">
           <span className="font-mono">{fmtDuration(currentTime)} / {fmtDuration(duration)}</span>
@@ -180,7 +247,17 @@ export function Timeline({ audioUrl, duration, cuts, scenes, videoRef, currentTi
         </div>
       </div>
       <div ref={containerRef} className="rounded-lg bg-panel-dark" />
-      <div className="text-[11px] text-text-faint">Klick in die Wellenform spult das Video · Strg + Mausrad zoomt · Klick auf einen Cut wählt ihn aus</div>
+      <EventLane
+        events={events}
+        view={view}
+        onPick={(e) => {
+          const v = videoRef.current;
+          if (v) v.currentTime = Math.max(0, e.start - 0.5);
+        }}
+      />
+      <div className="text-[11px] text-text-faint">
+        Klick in die Wellenform spult das Video · Strg + Mausrad zoomt · Klick auf einen Cut wählt ihn aus · Klick auf ein Event springt 0,5 s davor
+      </div>
     </section>
   );
 }

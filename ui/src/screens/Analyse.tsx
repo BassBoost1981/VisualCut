@@ -8,9 +8,13 @@ import { useSettings } from "../lib/settings";
 const STAGE_INFO: Record<Stage, { title: string; detail: string }> = {
   ingest: { title: "Stufe 0 · Ingest", detail: "Proxy, Audio, Hash" },
   technical: { title: "Stufe 1 · Technische Analyse", detail: "Szenen, Stille" },
+  events: { title: "Stufe 1b · Ereignisse", detail: "Pose, Audio-Tags, X-CLIP, VideoMAE, Vision-LLM" },
   speech: { title: "Stufe 2 · Transkription", detail: "faster-whisper + whisperX" },
+  semantic: { title: "Stufe 3 · Semantik", detail: "Claude auf Wort-IDs (ohne API-Key übersprungen)" },
   fusion: { title: "Stufe 4 · Fusion und Snapping", detail: "Regeln, Wortgrenzen, Frames" },
 };
+
+const STAGE_NUMBER: Record<Stage, string> = { ingest: "0", technical: "1", events: "1b", speech: "2", semantic: "3", fusion: "4" };
 
 export function Analyse({ jobId }: { jobId: string }) {
   const { job, events, stages, status, error } = useJobProgress(jobId);
@@ -84,8 +88,8 @@ export function Analyse({ jobId }: { jobId: string }) {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)]">
         <ol className="flex flex-col gap-3">
-          {STAGES.map((s, i) => (
-            <StageRow key={s} index={i} stage={s} progress={stages[s]} />
+          {STAGES.map((s) => (
+            <StageRow key={s} stage={s} progress={stages[s]} />
           ))}
         </ol>
         <Card className="flex min-h-[320px] flex-col overflow-hidden p-0">
@@ -113,7 +117,7 @@ export function Analyse({ jobId }: { jobId: string }) {
   );
 }
 
-function StageRow({ index, stage, progress }: { index: number; stage: Stage; progress: StageProgress }) {
+function StageRow({ stage, progress }: { stage: Stage; progress: StageProgress }) {
   const info = STAGE_INFO[stage];
   const color = progress.state === "failed" ? "danger" : progress.state === "running" ? "accent" : "success";
   const label = { pending: "wartet", running: "läuft", done: "fertig", skipped: "Cache", failed: "Fehler" }[progress.state];
@@ -128,7 +132,7 @@ function StageRow({ index, stage, progress }: { index: number; stage: Stage; pro
       <Card className={`flex flex-col gap-2 p-4 ${progress.state === "pending" ? "opacity-60" : ""}`}>
         <div className="flex items-center gap-3">
           <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${progress.state === "done" || progress.state === "skipped" ? "bg-[#17C964] text-[#052e16]" : progress.state === "running" ? "bg-primary text-white" : progress.state === "failed" ? "bg-[#F31260] text-white" : "bg-line text-text-muted"}`}>
-            {index}
+            {STAGE_NUMBER[stage]}
           </span>
           <div className="min-w-0 flex-1">
             <div className="font-semibold">{info.title}</div>

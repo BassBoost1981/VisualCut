@@ -1,12 +1,14 @@
 import { Button, Card, Label, ListBox, Select } from "@heroui/react";
 import type { Key } from "react-aria-components";
 import { useHealth } from "../api/queries";
+import { EventsEditor } from "../components/EventsEditor";
 import type { Stage } from "../api/types";
 import { LANGUAGES, useSettings, WHISPER_MODELS } from "../lib/settings";
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: "fusion", label: "Alles (bis Fusion)" },
   { id: "speech", label: "Bis Transkription" },
+  { id: "events", label: "Bis Ereigniserkennung (Stufe 1b)" },
   { id: "technical", label: "Nur technische Analyse" },
   { id: "ingest", label: "Nur Ingest" },
 ];
@@ -54,7 +56,7 @@ export function Settings() {
   const s = useSettings();
   const health = useHealth();
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-6">
       <h1 className="text-base font-semibold">Einstellungen</h1>
       <Card className="flex flex-col gap-5 p-5">
         <Card.Header>
@@ -71,6 +73,7 @@ export function Settings() {
           </p>
         </Card.Content>
       </Card>
+      <EventsEditor />
       <Card className="flex flex-col gap-3 p-5">
         <Card.Header>
           <Card.Title>Backend</Card.Title>

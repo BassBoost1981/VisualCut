@@ -1,6 +1,6 @@
 /** Typisierter Client für `visualcut serve`. Kernmodelle kommen aus types.ts (generiert), die
  *  API-Hüllen (ProjectSummary, JobInfo, …) sind hier nachgebildet, weil sie nicht im Schema stehen. */
-import type { Analysis, Cut, CutStatus, Decisions, ProgressEvent, Stage } from "./types";
+import type { Analysis, Cut, CutStatus, Decisions, EventCatalog, ProgressEvent, Stage } from "./types";
 
 export interface ProjectSummary {
   content_hash: string;
@@ -45,7 +45,13 @@ export interface ExportResult {
   format: string;
   cuts_applied: number;
   markers: number;
+  event_markers?: number;
   clips: number;
+}
+
+export interface CatalogInfo {
+  path: string;
+  catalog: EventCatalog;
 }
 
 export interface RenderRequest {
@@ -108,6 +114,8 @@ export const api = {
     request<ExportResult>(`/projects/${hash}/export`, { method: "POST", ...json(body) }),
   renderPreview: (hash: string, body: RenderRequest) =>
     request<{ path: string }>(`/projects/${hash}/render`, { method: "POST", ...json(body) }),
+  getCatalog: () => request<CatalogInfo>("/events/catalog"),
+  putCatalog: (catalog: EventCatalog) => request<CatalogInfo>("/events/catalog", { method: "PUT", ...json(catalog) }),
 };
 
 export const mediaUrl = (hash: string, kind: "proxy" | "audio") => `${BASE}/projects/${hash}/files/${kind}`;

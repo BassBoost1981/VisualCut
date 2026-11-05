@@ -318,3 +318,32 @@ def test_quiet_synthetic_video_has_no_dancing(synthetic_video: Path, tmp_path: P
     assert result.layers["pose"].startswith("ok") and result.layers["xclip"].startswith("ok")
     assert [e for e in result.events if e.type == "dancing"] == []
     assert [d for d in result.detections if d.type == "dancing" and "pose" in d.sources] == []
+
+
+# ---------------------------------------------------------------- API
+
+
+def test_api_catalog_roundtrip_keeps_header(analyzed: ProjectCache, tmp_path: Path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from visualcut.api.app import create_app
+
+    target = tmp_path / "events.yaml"
+    target.write_text((Path(catalog.__file__).resolve().parents[3] / "events.yaml").read_text(encoding="utf-8"),
+                      encoding="utf-8")
+    monkeypatch.setenv("VISUALCUT_EVENTS", str(target))
+    monkeypatch.setenv("VISUALCUT_CACHE", str(analyzed.dir.parent))
+    client = TestClient(create_app())
+    info = client.get("/events/catalog").json()
+    assert info["path"] == str(target) and info["catalog"]["vision_budget"] == 40
+    cat = info["catalog"]
+    cat["vision_budget"] = 12
+    cat["events"].append({"type": "drinking_coffee", "label": "Kaffee", "prompt": "person drinking coffee", "effect": "cut"})
+    saved = client.put("/events/catalog", json=cat).json()["catalog"]
+    assert saved["vision_budget"] == 12 and saved["events"][-1]["type"] == "drinking_coffee"
+    text = target.read_text(encoding="utf-8")
+    assert text.startswith("# VisualCut Stufe 1b") and "#   effect" in text  # Feldbeschreibung bleibt
+    bad = dict(cat, events=cat["events"] + [cat["events"][0]])
+    assert client.put("/events/catalog", json=bad).status_code == 422  # doppelter Typ
+    r = client.get(f"/projects/{analyzed.hash}/events", params={"pending": True}).json()
+    assert r["count"] == 0 and r["windows"] == [] and r["instructions_path"].endswith("vision_event_v1.md")
