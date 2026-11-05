@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from .. import decisions as decisions_mod
+from ..pipeline import select_cuts
 from ..schema import Cut, CutStatus, Decisions
 from .routes_projects import get_analysis_or_404, get_cache_or_404
 
@@ -25,9 +26,12 @@ class DecisionBody(BaseModel):
 
 
 @router.get("/cuts", response_model=CutList)
-def get_cuts(content_hash: str, min_confidence: float = 0.0, status: CutStatus | None = None) -> CutList:
+def get_cuts(
+    content_hash: str, min_confidence: float = 0.0, status: CutStatus | None = None,
+    reason: list[str] | None = Query(None),
+) -> CutList:
     a = get_analysis_or_404(content_hash)
-    sel = [c for c in a.cuts if c.confidence >= min_confidence and (status is None or c.status == status)]
+    sel = select_cuts(a.cuts, min_confidence, status, reason)
     return CutList(content_hash=content_hash, fps=a.media.fps, count=len(sel), cuts=sel)
 
 

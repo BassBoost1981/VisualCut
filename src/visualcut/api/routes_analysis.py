@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..schema import ProgressEvent, Stage
+from ..semantic import DEFAULT_MODEL
 from .jobs import manager
 
 router = APIRouter(tags=["analysis"])
@@ -19,6 +20,8 @@ class AnalyzeRequest(BaseModel):
     force: bool = False
     whisper_model: str = "large-v3"
     language: str = "de"
+    llm: bool = True
+    llm_model: str = DEFAULT_MODEL
 
 
 class JobInfo(BaseModel):
@@ -39,7 +42,7 @@ def start_analysis(body: AnalyzeRequest) -> JobInfo:
     video = Path(body.path)
     if not video.is_file():
         raise HTTPException(422, f"Datei nicht gefunden: {video}")
-    job = manager.start(video, body.stage, body.force, body.whisper_model, body.language)
+    job = manager.start(video, body.stage, body.force, body.whisper_model, body.language, body.llm, body.llm_model)
     return _info(job)
 
 

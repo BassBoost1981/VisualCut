@@ -14,10 +14,11 @@ class Stage(StrEnum):
     ingest = "ingest"
     technical = "technical"
     speech = "speech"
+    semantic = "semantic"
     fusion = "fusion"
 
 
-STAGE_ORDER: list[Stage] = [Stage.ingest, Stage.technical, Stage.speech, Stage.fusion]
+STAGE_ORDER: list[Stage] = [Stage.ingest, Stage.technical, Stage.speech, Stage.semantic, Stage.fusion]
 
 
 class CutReason(StrEnum):
@@ -148,9 +149,80 @@ class Cut(BaseModel):
         return self
 
 
+class Chapter(BaseModel):
+    """Stufe 3: inhaltlicher Abschnitt, nur Wort-IDs."""
+
+    title: str
+    start_word: int = Field(ge=0)
+    end_word: int = Field(ge=0)
+
+
+class Highlight(BaseModel):
+    start_word: int = Field(ge=0)
+    end_word: int = Field(ge=0)
+    score: float = Field(ge=0, le=1)
+    hook: str = ""
+
+
+class Flag(BaseModel):
+    word: int = Field(ge=0)
+    type: str = Field(description="z. B. unclear_audio, name_unclear, fact_check")
+
+
+class LLMCut(BaseModel):
+    """Ein Cut, wie das Modell ihn liefert (Structured Output). Ohne Constraints: validiert wird im Code."""
+
+    start_word: int
+    end_word: int
+    reason: CutReason
+    confidence: float
+    note: str
+
+
+class LLMChapter(BaseModel):
+    title: str
+    start_word: int
+    end_word: int
+
+
+class LLMHighlight(BaseModel):
+    start_word: int
+    end_word: int
+    score: float
+    hook: str
+
+
+class LLMFlag(BaseModel):
+    word: int
+    type: str
+
+
+class LLMResponse(BaseModel):
+    """JSON-Schema für die Claude-Antwort pro Block (PLAN.md Abschnitt 3, Stufe 3)."""
+
+    chapters: list[LLMChapter]
+    cuts: list[LLMCut]
+    highlights: list[LLMHighlight]
+    flags: list[LLMFlag]
+
+
+class SemanticResult(BaseModel):
+    """Stufe 3: validierte LLM-Ausgabe. Cuts haben source=llm und nur Wort-IDs, keine Sekunden."""
+
+    chapters: list[Chapter] = []
+    cuts: list[Cut] = []
+    highlights: list[Highlight] = []
+    flags: list[Flag] = []
+    model: str = ""
+    prompt_version: str = ""
+    blocks: int = 0
+    rejected: int = Field(default=0, description="Verworfene Einträge (ungültige IDs, Grenzen, Werte)")
+
+
 class FusionResult(BaseModel):
     cuts: list[Cut] = []
     fps: float = 25.0
+    llm_model: str | None = Field(default=None, description="Modell der LLM-Cuts, die eingeflossen sind, sonst null")
 
 
 class Analysis(BaseModel):
@@ -160,6 +232,7 @@ class Analysis(BaseModel):
     media: MediaInfo
     technical: TechnicalResult | None = None
     speech: SpeechResult | None = None
+    semantic: SemanticResult | None = None
     cuts: list[Cut] = []
     stages_done: list[Stage] = []
 

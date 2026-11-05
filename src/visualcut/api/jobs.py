@@ -12,6 +12,7 @@ from ..cache import ProjectCache
 from ..ingest import StageError
 from ..pipeline import run_analysis
 from ..schema import ProgressEvent, Stage
+from ..semantic import DEFAULT_MODEL
 
 
 @dataclass
@@ -31,7 +32,8 @@ class JobManager:
         self.loop: asyncio.AbstractEventLoop | None = None
         self._lock = threading.Lock()
 
-    def start(self, video: Path, upto: Stage, force: bool, whisper_model: str, language: str) -> Job:
+    def start(self, video: Path, upto: Stage, force: bool, whisper_model: str, language: str,
+              llm: bool = True, llm_model: str = DEFAULT_MODEL) -> Job:
         job = Job(id=uuid.uuid4().hex[:12], video=video, content_hash=ProjectCache.for_video(video).hash)
         self.jobs[job.id] = job
         try:
@@ -44,7 +46,7 @@ class JobManager:
 
         def work() -> None:
             try:
-                run_analysis(video, upto, force, progress, None, whisper_model, language)
+                run_analysis(video, upto, force, progress, None, whisper_model, language, llm, llm_model)
                 job.status = "done"
                 self._publish(job, ProgressEvent(event="job_done", message=job.id))
             except (StageError, Exception) as e:  # noqa: BLE001
