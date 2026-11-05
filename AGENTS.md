@@ -48,7 +48,27 @@ Ohne `ANTHROPIC_API_KEY` oder mit `--no-llm` wird die Stufe als `stage_skipped` 
 
 `GET /projects`, `GET /projects/{hash}`, `POST /analyze` (Job, Felder `llm`, `llm_model`), `GET /jobs/{id}`, `WS /ws/progress/{id}`,
 `GET /projects/{hash}/cuts?reason=retake`, `PUT /projects/{hash}/decisions/{cut_id}`, `POST /projects/{hash}/export`, `POST /projects/{hash}/render`.
+`GET /projects/{hash}/files/{proxy|audio}` streamt Proxy-MP4 und WAV aus dem Cache (Range-Requests für den Player).
 OpenAPI unter `/docs`. `GET /cuts` liefert exakt das JSON von `visualcut cuts --json` (Test erzwingt es).
+
+## Web-UI (`ui/`, Phase 2)
+
+Vite, React 19, TypeScript, HeroUI 3, Tailwind 4, TanStack Query/Virtual, Zustand, wavesurfer.js, react-hotkeys-hook.
+Screens: Start (Pfad eintragen, Projektliste), Analyse (Stepper + Live-Log aus `/ws/progress/{id}`), Review (Player auf dem
+Proxy, Wellenform mit Cut-Regionen, Transkript mit Mitlauf, Tasten J/K/L, Leertaste, A annehmen, R verwerfen, O öffnen,
+↑/↓ Cut wechseln), Export, Einstellungen (Whisper-Modell, Sprache, Stufe; liegen im localStorage).
+
+```
+cd ui && npm install
+npm run dev        # Vite auf http://localhost:5173, Proxy auf das Backend (visualcut serve muss auf 8765 laufen)
+npm run build      # schreibt ui/dist; `visualcut serve` liefert es danach unter http://localhost:8765 aus
+npm run test       # Vitest (API-Client)
+npm run types      # src/api/schema.json + types.ts aus `visualcut schema` neu erzeugen (nach Änderungen an schema.py)
+```
+
+Routen sind Hash-Routen (`#/review/<hash>`), darum braucht das statische Ausliefern keinen SPA-Fallback. Die Farben der
+Cut-Gründe stehen in `ui/src/lib/reasons.ts` und müssen mit `design/mockups/README.md` übereinstimmen.
+`VISUALCUT_UI_DIST` überschreibt den Pfad zum gebauten Frontend.
 
 ## MCP-Server (`visualcut-mcp`, stdio)
 
@@ -71,8 +91,8 @@ Sprach-Fixture `tests/fixtures/speech_de.mp4` entsteht per Windows-TTS (`make_sp
 
 ## Regeln für Änderungen
 
-- Datenmodelle nur in `src/visualcut/schema.py` (Pydantic v2). `visualcut schema` muss danach weiter laufen.
-- Die Kernfunktionen (`ingest`, `technical`, `speech`, `semantic`, `fusion`, `export`) sind reine Bibliothek. CLI, API und MCP rufen dieselben Funktionen auf (`pipeline.require_analysis`, `pipeline.select_cuts`, `pipeline.summary`), keine Sonderlogik.
+- Datenmodelle nur in `src/visualcut/schema.py` (Pydantic v2). `visualcut schema` muss danach weiter laufen, danach `cd ui && npm run types`.
+- Die Kernfunktionen (`ingest`, `technical`, `speech`, `semantic`, `fusion`, `export`) sind reine Bibliothek. CLI, API, UI und MCP rufen dieselben Funktionen auf (`pipeline.require_analysis`, `pipeline.select_cuts`, `pipeline.summary`), keine Sonderlogik.
 - Ein LLM gibt niemals Sekundenwerte aus, nur Wort-IDs. Ungültige IDs werden verworfen und geloggt, nicht korrigiert.
-- Tests: `uv run pytest`. Das synthetische Fixture wird per ffmpeg erzeugt, kein echtes Video nötig. Die MCP-Tests laufen gegen den Cache von `talking2.mp4` (geskippt, wenn er fehlt), der Integrationstest mit echter Claude-API nur mit `ANTHROPIC_API_KEY`. LLM-Antworten werden in Tests konstruiert (`FakeClient` in `tests/test_semantic.py`).
+- Tests: `uv run pytest` und `cd ui && npm run test`. Das synthetische Fixture wird per ffmpeg erzeugt, kein echtes Video nötig. Die MCP-Tests laufen gegen den Cache von `talking2.mp4` (geskippt, wenn er fehlt), der Integrationstest mit echter Claude-API nur mit `ANTHROPIC_API_KEY`. LLM-Antworten werden in Tests konstruiert (`FakeClient` in `tests/test_semantic.py`).
 - `skills/visualcut/SKILL.md` und `.codex/skills/visualcut/SKILL.md` müssen identisch bleiben (Test).
