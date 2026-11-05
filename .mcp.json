@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "visualcut": {
-      "command": "visualcut-mcp",
-      "args": []
+      "command": "uv",
+      "args": [
+        "run",
+        "visualcut-mcp"
+      ]
     }
   }
 }

@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = ["visualcut-mcp"]
+EXPECTED = ["uv", "run", "visualcut-mcp"]
 
 
 def test_all_configs_start_visualcut_mcp():

@@ -3,7 +3,11 @@
   "mcp": {
     "visualcut": {
       "type": "local",
-      "command": ["visualcut-mcp"],
+      "command": [
+        "uv",
+        "run",
+        "visualcut-mcp"
+      ],
       "enabled": true
     }
   }

@@ -1,23 +1,23 @@
 # MCP-Registrierung für VisualCut
 
-Alle Agenten starten denselben Befehl: `visualcut-mcp` (stdio). Ein Test (`tests/test_mcp_configs.py`) prüft, dass die Snippets hier und `.mcp.json` im Repo-Root nicht auseinanderlaufen.
+Alle Agenten starten denselben Befehl: `uv run visualcut-mcp` (stdio) mit dem Repo als Arbeitsverzeichnis. So läuft der Server im Projekt-venv inklusive Whisper. Ein Test (`tests/test_mcp_configs.py`) prüft, dass die Snippets hier und `.mcp.json` im Repo-Root nicht auseinanderlaufen.
 
-## Voraussetzung: `visualcut-mcp` auf dem PATH
+## Voraussetzung
 
 ```
-uv tool install --editable . --with-extra speech    # global, auch außerhalb des Repos
+uv sync --extra speech --extra dev
 ```
 
-Alternativ reicht `uv sync` plus das aktivierte `.venv` (`.venv\Scripts` bzw. `.venv/bin` auf dem PATH). Wer den Befehl nicht global haben will, ersetzt in jedem Snippet `visualcut-mcp` durch `uv` mit den Argumenten `["run", "--project", "<Pfad zum Repo>", "visualcut-mcp"]`.
+Wer den Server außerhalb des Repos braucht, ersetzt in jedem Snippet die Argumente durch `["run", "--project", "<Pfad zum Repo>", "visualcut-mcp"]`. Eine globale Installation (`uv tool install --editable .`) liefert den Befehl `visualcut-mcp` ohne Whisper; sie reicht für Cuts, Entscheidungen und Export auf bereits analysierten Projekten.
 
-Stufe 3 (Claude) braucht `ANTHROPIC_API_KEY` in der Umgebung des Agenten. Ohne Key läuft alles, nur ohne LLM-Cuts. Optional `VISUALCUT_CACHE` für einen anderen Cache-Ordner als `.visualcut` im Arbeitsverzeichnis.
+Stufe 3 übernimmt der Agent selbst (`semantic_instructions`, `get_transcript`, `submit_semantic`). Alternativ läuft sie über die Claude API, wenn `ANTHROPIC_API_KEY` in der Umgebung des Agenten steht. Optional `VISUALCUT_CACHE` für einen anderen Cache-Ordner als `.visualcut` im Arbeitsverzeichnis.
 
 ## Claude Code
 
 `.mcp.json` im Repo-Root wird automatisch gelesen. Außerhalb des Repos:
 
 ```
-claude mcp add visualcut -- visualcut-mcp
+claude mcp add visualcut -- uv run --project <Pfad zum Repo> visualcut-mcp
 ```
 
 ## Codex

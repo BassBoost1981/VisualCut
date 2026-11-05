@@ -80,7 +80,7 @@ Cut-Gründe stehen in `ui/src/lib/reasons.ts` und müssen mit `design/mockups/RE
 
 Dünne Schicht über denselben Kernfunktionen, offizielles `mcp`-SDK. Tools: `analyze`, `get_cuts`, `decide`, `export`, `get_transcript_path`, `semantic_instructions`, `get_transcript`, `submit_semantic`, `schema`. Große Ergebnisse kommen als Pfad (`analysis.json`, `speech.json`), nie als Inhalt. Fehler kommen als Text mit `is_error`.
 
-Registrierung: `.mcp.json` im Repo-Root (Claude Code), Snippets für Codex und OpenCode in `mcp-configs/`, T3 Code erbt von Claude Code oder Codex. Voraussetzung ist `visualcut-mcp` auf dem PATH (`uv tool install --editable .`), Details in `mcp-configs/README.md`. Ein Test prüft, dass alle Configs denselben Befehl starten.
+Registrierung: `.mcp.json` im Repo-Root (Claude Code), Snippets für Codex und OpenCode in `mcp-configs/`, T3 Code erbt von Claude Code oder Codex. Alle Configs starten `uv run visualcut-mcp` mit dem Repo als Arbeitsverzeichnis, also im Projekt-venv mit Whisper (`uv sync --extra speech`). Details in `mcp-configs/README.md`. Ein Test prüft, dass alle Configs denselben Befehl starten.
 
 ## Beispiel-Workflow (Agent)
 

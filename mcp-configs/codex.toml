@@ -1,4 +1,5 @@
 # Codex CLI: in ~/.codex/config.toml einfügen (oder .codex/config.toml im Projekt)
+# Startet den Server aus dem Projekt-venv (uv sync --extra speech), Arbeitsverzeichnis = Repo.
 [mcp_servers.visualcut]
-command = "visualcut-mcp"
-args = []
+command = "uv"
+args = ["run", "visualcut-mcp"]
