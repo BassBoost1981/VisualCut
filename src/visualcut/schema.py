@@ -206,6 +206,20 @@ class LLMResponse(BaseModel):
     flags: list[LLMFlag]
 
 
+class SemanticSubmission(BaseModel):
+    """Stufe 3 von außen: der steuernde Agent (Claude Code, Codex, ...) liefert dieselben Felder wie die
+    Claude API, nur Wort-IDs. Alle Listen optional, `source` benennt den Absender."""
+
+    source: str = Field(default="agent", description="z. B. agent:claude-code, agent:codex")
+    chapters: list[LLMChapter] = []
+    cuts: list[LLMCut] = []
+    highlights: list[LLMHighlight] = []
+    flags: list[LLMFlag] = []
+
+    def as_response(self) -> LLMResponse:
+        return LLMResponse(chapters=self.chapters, cuts=self.cuts, highlights=self.highlights, flags=self.flags)
+
+
 class SemanticResult(BaseModel):
     """Stufe 3: validierte LLM-Ausgabe. Cuts haben source=llm und nur Wort-IDs, keine Sekunden."""
 
@@ -223,6 +237,7 @@ class FusionResult(BaseModel):
     cuts: list[Cut] = []
     fps: float = 25.0
     llm_model: str | None = Field(default=None, description="Modell der LLM-Cuts, die eingeflossen sind, sonst null")
+    semantic_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen Stufe-3-Cuts, für den Cache")
 
 
 class Analysis(BaseModel):

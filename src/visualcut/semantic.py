@@ -16,7 +16,7 @@ from .cache import ProgressFn, ProjectCache, emit
 from .fusion import REASON_PRIORITY
 from .ingest import StageError
 from .schema import (
-    Chapter, Cut, CutSource, Flag, Highlight, LLMResponse, SemanticResult, SpeechResult, Stage, Word,
+    Chapter, Cut, CutSource, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage, Word,
 )
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
@@ -175,6 +175,42 @@ def combine(results: list[SemanticResult]) -> SemanticResult:
         chapters=chapters, cuts=cuts, highlights=highlights, flags=flags, blocks=len(results),
         rejected=sum(r.rejected for r in results),
     )
+
+
+def fingerprint(result: SemanticResult | None) -> str | None:
+    """Kennung der Stufe-3-Cuts, damit die Fusion nach jeder Einreichung neu rechnet."""
+    if result is None:
+        return None
+    import hashlib
+
+    h = hashlib.sha1(result.model.encode())
+    for c in sorted(result.cuts, key=lambda c: (c.start_word, c.end_word, c.reason.value)):
+        h.update(f"{c.start_word}:{c.end_word}:{c.reason.value}:{c.confidence}".encode())
+    return h.hexdigest()[:16]
+
+
+# ---------------------------------------------------------------- Einreichung durch den steuernden Agenten
+
+
+def submit(
+    cache: ProjectCache, speech: SpeechResult, submission: SemanticSubmission,
+    progress: ProgressFn | None = None, append: bool = False,
+) -> SemanticResult:
+    """Stufe 3 ohne API: der Agent, der VisualCut steuert, liefert Cuts, Kapitel, Highlights und Flags
+    auf Wort-IDs. Gleiche Validierung wie bei der Claude-Antwort. `append` vereinigt mit dem Vorhandenen,
+    sonst wird semantic.json ersetzt."""
+    stage = Stage.semantic
+    emit(progress, "stage_start", stage, f"Einreichung von {submission.source}")
+    result = validate(submission.as_response(), speech.words, progress)
+    if append and cache.has(stage):
+        previous = cache.load(stage, SemanticResult)
+        result = combine([previous, result])
+    result.model, result.prompt_version, result.blocks = submission.source, PROMPT_VERSION, 1
+    cache.save(stage, result)
+    emit(progress, "stage_done", stage,
+         f"{len(result.cuts)} Cuts, {len(result.chapters)} Kapitel, {len(result.highlights)} Highlights, "
+         f"{result.rejected} verworfen")
+    return result
 
 
 # ---------------------------------------------------------------- Claude-Aufruf

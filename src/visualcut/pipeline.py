@@ -10,9 +10,10 @@ from .fusion import fuse
 from .ingest import ingest
 from .ingest import StageError
 from .schema import (
-    STAGE_ORDER, Analysis, Cut, CutStatus, FusionResult, MediaInfo, SemanticResult, SpeechResult, Stage, TechnicalResult,
+    STAGE_ORDER, Analysis, Cut, CutStatus, FusionResult, MediaInfo, SemanticResult, SemanticSubmission, SpeechResult, Stage,
+    TechnicalResult,
 )
-from .semantic import DEFAULT_MODEL, analyze_semantic, merge_with_rules
+from .semantic import DEFAULT_MODEL, analyze_semantic, fingerprint, format_block, merge_with_rules, submit
 from .speech import PRIMARY_MODEL, rule_cuts, transcribe
 from .technical import analyze_technical
 
@@ -60,9 +61,10 @@ def run_fusion(
 ) -> FusionResult:
     stage = Stage.fusion
     llm_model = semantic.model if semantic is not None else None
+    fp = fingerprint(semantic)
     if cache.has(stage) and not force:
         cached = cache.load(stage, FusionResult)
-        if cached.llm_model == llm_model:
+        if cached.llm_model == llm_model and cached.semantic_fingerprint == fp:
             emit(progress, "stage_skipped", stage, "Cache vorhanden")
             return cached
         emit(progress, "log", stage, "LLM-Cuts haben sich geändert, Fusion wird neu gerechnet")
@@ -75,7 +77,7 @@ def run_fusion(
     # waren in Tests auf Einzelaufnahmen durchweg Licht- und Bewegungsflackern.
     hard_scenes = [s for s in technical.scenes if "content" in s.detector]
     cuts = fuse(raw, speech.words, technical.silences, hard_scenes, media.fps, media.duration)
-    result = FusionResult(cuts=cuts, fps=media.fps, llm_model=llm_model)
+    result = FusionResult(cuts=cuts, fps=media.fps, llm_model=llm_model, semantic_fingerprint=fp)
     cache.save(stage, result)
     emit(progress, "stage_done", stage, f"{len(cuts)} Cuts")
     return result
@@ -144,3 +146,31 @@ def summary(analysis: Analysis, cache: ProjectCache) -> dict:
         "llm_model": sem.model if sem else None,
         "whisper_model": analysis.speech.model if analysis.speech else None,
     }
+
+
+def transcript_lines(speech: SpeechResult, start_word: int = 0, end_word: int | None = None) -> tuple[str, int, int]:
+    """Transkript als `ID TEXT`-Zeilen (das Format aus prompts/semantic_v1.md) für einen Ausschnitt.
+    Gibt (Text, erste ID, letzte ID) zurück."""
+    words = [w for w in speech.words if w.id >= start_word and (end_word is None or w.id <= end_word)]
+    if not words:
+        return "", start_word, start_word
+    return format_block(words), words[0].id, words[-1].id
+
+
+def submit_semantic(
+    video: Path, submission: SemanticSubmission, append: bool = False,
+    progress: ProgressFn | None = None, cache_root: Path | None = None,
+) -> dict:
+    """Stufe 3 aus einer Agenten-Einreichung schreiben und die Fusion neu rechnen. Gibt die Kennzahlen zurück."""
+    cache = cache_for(video, cache_root)
+    analysis = load_analysis(cache)
+    if analysis is None or analysis.speech is None or analysis.technical is None:
+        raise StageError(f"Kein Transkript im Cache, zuerst: visualcut analyze {video} --stage speech")
+    semantic = submit(cache, analysis.speech, submission, progress, append)
+    run_fusion(cache, analysis.media, analysis.technical, analysis.speech, semantic, progress)
+    refreshed = load_analysis(cache)
+    assert refreshed is not None
+    cache.path("analysis.json").write_text(refreshed.model_dump_json(indent=2), encoding="utf-8")
+    info = summary(refreshed, cache)
+    info["rejected"] = semantic.rejected
+    return info

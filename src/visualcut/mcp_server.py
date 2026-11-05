@@ -20,8 +20,8 @@ from pydantic import ValidationError
 from . import __version__, decisions as decisions_mod, export as export_mod, pipeline
 from .cache import stderr_progress
 from .ingest import StageError
-from .schema import CutStatus, Stage, json_schema
-from .semantic import DEFAULT_MODEL
+from .schema import CutStatus, LLMChapter, LLMCut, LLMFlag, LLMHighlight, SemanticSubmission, Stage, json_schema
+from .semantic import DEFAULT_MODEL, load_prompt
 
 INSTRUCTIONS = (
     "VisualCut analysiert Rohvideo lokal und liefert framegenaue Schnittvorschläge. Ablauf: analyze(path) "
@@ -130,6 +130,44 @@ def get_transcript_path(path: str) -> dict[str, Any]:
         "semantic_path": str(cache.stage_file(Stage.semantic)) if sem else None,
         "chapters": [ch.model_dump() for ch in sem.chapters] if sem else [],
     }
+
+
+@tool
+def semantic_instructions() -> str:
+    """Anleitung für Stufe 3 (prompts/semantic_v1.md): Regeln, erlaubte reason-Werte, Ausgabeformat. Vor
+    submit_semantic einmal lesen und befolgen."""
+    return load_prompt()
+
+
+@tool
+def get_transcript(path: str, start_word: int = 0, max_words: int = 2000) -> dict[str, Any]:
+    """Transkript als `ID TEXT`-Zeilen ab start_word, höchstens max_words Wörter (Standard 2000, wie ein
+    API-Block). Blockweise durchgehen: next_word ist die nächste ID oder null am Ende. Das ist die Eingabe
+    für submit_semantic; verwende ausschließlich diese IDs."""
+    cache = pipeline.cache_for(_video(path))
+    analysis = pipeline.load_analysis(cache)
+    if analysis is None or analysis.speech is None:
+        raise ValueError("Kein Transkript im Cache, zuerst: analyze(path, stage='speech')")
+    words = analysis.speech.words
+    text, first, last = pipeline.transcript_lines(analysis.speech, start_word, start_word + max(1, max_words) - 1)
+    nxt = next((w.id for w in words if w.id > last), None) if text else None
+    return {"language": analysis.speech.language, "total_words": len(words), "first_word": first, "last_word": last,
+            "next_word": nxt, "lines": text}
+
+
+@tool
+def submit_semantic(
+    path: str, cuts: list[LLMCut] | None = None, chapters: list[LLMChapter] | None = None,
+    highlights: list[LLMHighlight] | None = None, flags: list[LLMFlag] | None = None,
+    source: str = "agent", append: bool = False,
+) -> dict[str, Any]:
+    """Stufe 3 einreichen: Cuts (start_word, end_word, reason, confidence, note), Kapitel, Highlights, Flags,
+    alles nur mit Wort-IDs aus get_transcript. Ungültige IDs werden verworfen und gezählt (rejected), nicht
+    korrigiert. Schreibt semantic.json und rechnet die Fusion (Snapping auf Frames) neu. append=True vereinigt
+    mit einer früheren Einreichung, sonst wird sie ersetzt. Gibt die Kennzahlen wie analyze zurück."""
+    sub = SemanticSubmission(source=source, cuts=cuts or [], chapters=chapters or [], highlights=highlights or [],
+                             flags=flags or [])
+    return pipeline.submit_semantic(_video(path), sub, append, stderr_progress)
 
 
 @tool

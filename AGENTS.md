@@ -36,7 +36,12 @@ Exit-Codes: 0 ok, 2 Eingabefehler, 3 Stufe fehlgeschlagen, 4 Cache ungültig.
 - Status eines Cuts: `open`, `accepted`, `rejected`. Offene Cuts werden beim Export als Marker gesetzt (Option `--open-as-cut`, um sie zu schneiden), verworfene fehlen.
 - Jeder Cut hat `source` (`rule` oder `llm`), `reason`, `confidence`, `note` (Begründung) und `maybe` (Konfidenz unter 0,6).
 
-## Stufe 3: Semantik per Claude (`semantic.py`)
+## Stufe 3: Semantik (`semantic.py`), zwei Wege
+
+**Weg A, ohne API-Key (Standard für Agenten):** Der Agent, der VisualCut steuert, ist selbst das LLM. Ablauf: `visualcut semantic --instructions` (bzw. MCP `semantic_instructions()`) lesen, `visualcut transcript video.mp4 --json` (bzw. `get_transcript(path, start_word, max_words)`) blockweise holen, Cuts/Kapitel/Highlights/Flags auf Wort-IDs zusammenstellen und per `visualcut semantic video.mp4 --from cuts.json --source agent:<name>` (bzw. `submit_semantic(path, cuts=..., ...)`) einreichen. Dateiformat: `SemanticSubmission` (siehe `visualcut schema`), alle Listen optional. `--append` vereinigt mit einer früheren Einreichung, sonst wird sie ersetzt. Validierung und Fusion sind dieselben wie bei Weg B; `rejected` in der Antwort zählt verworfene Einträge.
+
+**Weg B, Claude API:** läuft automatisch in `visualcut analyze`, wenn `ANTHROPIC_API_KEY` gesetzt ist.
+
 
 Das Transkript geht als nummerierte Wörter (`ID TEXT` pro Zeile) in Blöcken von 2000 Wörtern mit 200 Wörtern Überlappung an die Claude API (Anthropic SDK, Structured Output mit dem Schema `LLMResponse`). Prompt: `prompts/semantic_v1.md`, versioniert; eine Änderung bekommt eine neue Datei `semantic_v2.md`. Standardmodell `claude-sonnet-5-5`, Option `claude-fable-5-1`.
 
@@ -72,16 +77,17 @@ Cut-Gründe stehen in `ui/src/lib/reasons.ts` und müssen mit `design/mockups/RE
 
 ## MCP-Server (`visualcut-mcp`, stdio)
 
-Dünne Schicht über denselben Kernfunktionen, offizielles `mcp`-SDK. Tools: `analyze`, `get_cuts`, `decide`, `export`, `get_transcript_path`, `schema`. Große Ergebnisse kommen als Pfad (`analysis.json`, `speech.json`), nie als Inhalt. Fehler kommen als Text mit `is_error`.
+Dünne Schicht über denselben Kernfunktionen, offizielles `mcp`-SDK. Tools: `analyze`, `get_cuts`, `decide`, `export`, `get_transcript_path`, `semantic_instructions`, `get_transcript`, `submit_semantic`, `schema`. Große Ergebnisse kommen als Pfad (`analysis.json`, `speech.json`), nie als Inhalt. Fehler kommen als Text mit `is_error`.
 
 Registrierung: `.mcp.json` im Repo-Root (Claude Code), Snippets für Codex und OpenCode in `mcp-configs/`, T3 Code erbt von Claude Code oder Codex. Voraussetzung ist `visualcut-mcp` auf dem PATH (`uv tool install --editable .`), Details in `mcp-configs/README.md`. Ein Test prüft, dass alle Configs denselben Befehl starten.
 
 ## Beispiel-Workflow (Agent)
 
 1. `analyze(path="talking2.mp4", language="en")` bzw. `visualcut analyze talking2.mp4 --json --summary --language en`. Ergebnis: Kennzahlen plus `analysis_path`.
-2. `get_cuts(path, min_confidence=0.6)` und dem Nutzer erklären: Anzahl, Gründe, entfernte Zeit, unsichere Cuts (`maybe`). Für eine konkrete Stelle in `speech.json` (Pfad aus `get_transcript_path`) nachlesen.
-3. Nach Rückfrage `decide(path, cut_id, "accepted")` bzw. `"rejected"`.
-4. `export(path, format="fcpxml")`, Pfad an den Nutzer, Import in Resolve.
+2. Stufe 3 selbst übernehmen: `semantic_instructions()`, dann `get_transcript(path)` blockweise, dann `submit_semantic(path, cuts=[...], chapters=[...])`. Nur IDs aus dem Transkript, keine Sekunden.
+3. `get_cuts(path, min_confidence=0.6)` und dem Nutzer erklären: Anzahl, Gründe, entfernte Zeit, unsichere Cuts (`maybe`). Für eine konkrete Stelle in `speech.json` (Pfad aus `get_transcript_path`) nachlesen.
+4. Nach Rückfrage `decide(path, cut_id, "accepted")` bzw. `"rejected"`.
+5. `export(path, format="fcpxml")`, Pfad an den Nutzer, Import in Resolve.
 
 ## Umgebung (Stand 2026-11-05)
 

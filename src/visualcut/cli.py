@@ -16,8 +16,8 @@ from pydantic import ValidationError
 from . import __version__, decisions as decisions_mod, export as export_mod, pipeline
 from .cache import stderr_progress
 from .ingest import StageError
-from .schema import CutStatus, Stage, json_schema
-from .semantic import DEFAULT_MODEL
+from .schema import CutStatus, SemanticSubmission, Stage, json_schema
+from .semantic import DEFAULT_MODEL, load_prompt
 
 EXIT_OK, EXIT_INPUT, EXIT_STAGE, EXIT_CACHE = 0, 2, 3, 4
 
@@ -189,6 +189,60 @@ def render(
         src = analysis.media.path if original else None
         export_mod.render_preview(analysis.media, analysis.cuts, out, include_open=open_as_cut, source=src)
         _out({"path": str(out)}, json_, str(out))
+
+    _guard(go, json_)
+
+
+@app.command()
+def transcript(
+    video: VideoArg,
+    json_: JsonFlag = False,
+    from_word: Annotated[int, typer.Option("--from-word", help="Erste Wort-ID")] = 0,
+    to_word: Annotated[int | None, typer.Option("--to-word", help="Letzte Wort-ID (einschließlich)")] = None,
+    cache_dir: CacheOpt = None,
+) -> None:
+    """Transkript als `ID TEXT`-Zeilen, das Eingabeformat für Stufe 3 (siehe `visualcut semantic --instructions`)."""
+
+    def go():
+        cache = pipeline.cache_for(video, cache_dir)
+        analysis = pipeline.load_analysis(cache)
+        if analysis is None or analysis.speech is None:
+            raise StageError(f"Kein Transkript im Cache, zuerst: visualcut analyze {video} --stage speech")
+        text, first, last = pipeline.transcript_lines(analysis.speech, from_word, to_word)
+        data = {"content_hash": cache.hash, "language": analysis.speech.language, "total_words": len(analysis.speech.words),
+                "first_word": first, "last_word": last, "lines": text}
+        _out(data, json_, text)
+
+    _guard(go, json_)
+
+
+@app.command()
+def semantic(
+    video: Annotated[Path | None, typer.Argument(help="Eingabevideo")] = None,
+    from_file: Annotated[Path | None, typer.Option("--from", help="JSON mit cuts/chapters/highlights/flags auf Wort-IDs")] = None,
+    source: Annotated[str | None, typer.Option("--source", help="Absender, z. B. agent:claude-code")] = None,
+    append: Annotated[bool, typer.Option("--append", help="Mit vorhandener Stufe 3 vereinigen statt ersetzen")] = False,
+    instructions: Annotated[bool, typer.Option("--instructions", help="Anleitung für den Agenten ausgeben (prompts/semantic_v1.md)")] = False,
+    json_: JsonFlag = False,
+    cache_dir: CacheOpt = None,
+) -> None:
+    """Stufe 3 ohne API-Key: der steuernde Agent liefert die semantischen Cuts selbst (nur Wort-IDs).
+    Validiert, schreibt semantic.json und rechnet die Fusion neu."""
+
+    def go():
+        if instructions:
+            text = load_prompt()
+            _out({"instructions": text}, json_, text)
+            return
+        if video is None or from_file is None:
+            raise ValueError("Video und --from <datei.json> angeben, oder --instructions")
+        if not from_file.exists():
+            raise FileNotFoundError(from_file)
+        sub = SemanticSubmission.model_validate_json(from_file.read_text(encoding="utf-8"))
+        if source:
+            sub.source = source
+        info = pipeline.submit_semantic(video, sub, append, stderr_progress, cache_dir)
+        _out(info, json_, f"{info['llm_cuts']} Stufe-3-Cuts, {info['rejected']} verworfen, {info['cuts']} Cuts gesamt")
 
     _guard(go, json_)
 

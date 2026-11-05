@@ -38,7 +38,7 @@ def talking2(tmp_path_factory) -> tuple[Path, Path]:
     root = tmp_path_factory.mktemp("mcp-cache")
     (root / h).mkdir()
     for f in src.glob("*.json"):
-        if f.name != "decisions.json":
+        if f.name not in ("decisions.json", "semantic.json"):  # ohne Stufe 3: die Tests erwarten reine Regel-Cuts
             shutil.copy(f, root / h / f.name)
     return video, root
 
@@ -61,7 +61,7 @@ def test_tools_are_registered():
         async with Client(server) as c:
             return sorted(t.name for t in (await c.list_tools()).tools)
 
-    assert asyncio.run(names()) == ["analyze", "decide", "export", "get_cuts", "get_transcript_path", "schema"]
+    assert asyncio.run(names()) == ["analyze", "decide", "export", "get_cuts", "get_transcript", "get_transcript_path", "schema", "semantic_instructions", "submit_semantic"]
 
 
 def test_get_cuts_matches_cli(cache_env):
