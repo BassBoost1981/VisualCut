@@ -32,6 +32,8 @@ speech = [
 events = [
     # Stufe 1b: Pose (RTMPose über ONNX, MediaPipe als Fallback), CLAP, X-CLIP, VideoMAE
     "rtmlib>=0.0.15",
+    # RTMPose bleibt auf der CPU: onnxruntime-gpu war hier doppelt so langsam (37 s CPU gegen 77 s CUDA
+    # für 995 Bilder, cuDNN-Faltungen im Fallback-Modus, Modell zu klein für die Transferkosten)
     "onnxruntime>=1.20",
     "mediapipe>=0.10.20",
     "transformers>=4.50",

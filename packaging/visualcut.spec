@@ -25,7 +25,8 @@ for tool in ("ffmpeg", "ffprobe"):
 # NLTK-Satzdaten (punkt_tab) kopiert packaging/bundle_models.py nach data/models/nltk_data
 
 for pkg in ("faster_whisper", "ctranslate2", "whisperx", "scenedetect", "opentimelineio",
-            "otio_fcpx_xml_adapter", "otio_cmx3600_adapter", "webview", "nltk"):
+            "otio_fcpx_xml_adapter", "otio_cmx3600_adapter", "webview", "nltk",
+            "onnxruntime", "rtmlib", "mediapipe"):  # Stufe 1b: Pose (ONNX) und MediaPipe-Ersatz
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
@@ -51,7 +52,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
-    excludes=["tkinter", "matplotlib", "IPython", "pytest", "PyInstaller"],
+    excludes=["tkinter", "IPython", "pytest", "PyInstaller"],  # matplotlib bleibt: MediaPipe (Pose-Ersatz) braucht es
     noarchive=False,
 )
 pyz = PYZ(a.pure)

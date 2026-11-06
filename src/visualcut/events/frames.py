@@ -33,7 +33,9 @@ def iter_frames(video: Path, fps: float, width: int, height: int, start: float =
         cmd += ["-t", f"{duration:.3f}"]
     cmd += ["-an", "-vf", f"fps={fps:.6g},scale={width}:{height}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
     frame_bytes = width * height * 3
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    # CREATE_NO_WINDOW: in der Desktop-Exe ohne Konsole öffnete sonst jeder Aufruf ein eigenes Fenster
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     assert proc.stdout is not None
     # Lesethread: ffmpeg dekodiert weiter, während der Aufrufer rechnet (die Pipe puffert nur 64 KB)
     q: queue.Queue[bytes | None] = queue.Queue(maxsize=32)

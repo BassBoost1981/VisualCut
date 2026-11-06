@@ -73,12 +73,37 @@ def probe(video: Path, hash_: str) -> MediaInfo:
     )
 
 
+_NVENC: bool | None = None
+
+
+def nvenc_available() -> bool:
+    """H.264 auf der Nvidia-GPU (NVENC), einmal pro Prozess geprüft. VISUALCUT_NVENC=0 schaltet es ab."""
+    global _NVENC
+    if _NVENC is None:
+        if os.environ.get("VISUALCUT_NVENC", "1") == "0":
+            _NVENC = False
+        else:
+            probe_run = run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=s=256x256:d=0.2", "-c:v", "h264_nvenc",
+                             "-f", "null", "-"], check=False)
+            _NVENC = probe_run.returncode == 0
+    return _NVENC
+
+
+def h264_args(quality: int) -> list[str]:
+    """Encoder-Argumente: NVENC auf der GPU, sonst libx264 auf der CPU. quality wie CRF (kleiner = besser).
+    Gemessen an talking2.mp4: NVENC p2 mit cq = CRF + 8 ist fast doppelt so schnell wie x264 veryfast, bei
+    ähnlicher Größe und SSIM 0,98; die Qualitäts-Presets (p5, hq) wären langsamer als x264."""
+    if nvenc_available():
+        return ["-c:v", "h264_nvenc", "-preset", "p2", "-rc", "vbr", "-cq", str(quality + 8), "-b:v", "0"]
+    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", str(quality)]
+
+
 def make_proxy(video: Path, out: Path, fps: float) -> None:
     run([
         "ffmpeg", "-y", "-v", "error", "-i", str(video),
         "-vf", f"scale=-2:'min(720,ih)',fps={fps:.6g}",
         "-fps_mode", "cfr",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
+        *h264_args(23), "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "128k",
         str(out),
     ])

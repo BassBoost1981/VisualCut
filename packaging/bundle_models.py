@@ -12,6 +12,8 @@ from pathlib import Path
 
 WHISPER = ["Systran/faster-whisper-large-v3", "Systran/faster-whisper-medium"]
 ALIGN_LANGUAGES = ["de", "en"]
+# Stufe 1b (Ereignisse): CLAP (Audio), X-CLIP und VideoMAE (Aktionen); IDs wie in visualcut.events
+EVENT_HF = ["laion/clap-htsat-unfused", "microsoft/xclip-base-patch32", "MCG-NJU/videomae-base-finetuned-kinetics"]
 
 
 def hf_hub() -> Path:
@@ -29,8 +31,8 @@ def torch_checkpoints() -> Path:
 def ensure_sources() -> None:
     from huggingface_hub import snapshot_download
 
-    for repo in WHISPER:
-        print(f"Whisper {repo}")
+    for repo in WHISPER + EVENT_HF:
+        print(f"Hugging Face {repo}")
         snapshot_download(repo)
     import whisperx
 
@@ -65,13 +67,38 @@ def copy_nltk(target: Path) -> None:
     nltk.download("punkt_tab", download_dir=str(target), quiet=True)
 
 
+def copy_pose(models: Path) -> None:
+    """RTMPose + YOLOX (ONNX, rtmlib) nach torch/hub/checkpoints, wo rtmlib bei TORCH_HOME sucht, und das
+    MediaPipe-Ersatzmodell nach torch/visualcut (visualcut.events.pose.models_dir)."""
+    import urllib.request
+
+    from rtmlib import Body
+    from rtmlib.tools.file import download_checkpoint
+
+    from visualcut.events.pose import MP_MODEL_URL
+
+    dst = models / "torch" / "hub" / "checkpoints"
+    dst.mkdir(parents=True, exist_ok=True)
+    cfg = Body.MODE["lightweight"]
+    for url in (cfg["det"], cfg["pose"]):
+        print(f"Pose {Path(url).stem}")
+        onnx = Path(download_checkpoint(url))  # lädt bei Bedarf in den rtmlib-Cache des Build-Rechners
+        if not (dst / onnx.name).exists():
+            shutil.copy2(onnx, dst / onnx.name)
+    mp = models / "torch" / "visualcut" / "pose_landmarker_lite.task"
+    if not mp.exists():
+        mp.parent.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(MP_MODEL_URL, mp)
+
+
 def main(app_dir: Path) -> None:
     ensure_sources()
     models = app_dir / "data" / "models"
-    for repo in WHISPER:
+    for repo in WHISPER + EVENT_HF:
         name = "models--" + repo.replace("/", "--")
         copy_tree(hf_hub() / name, models / "huggingface" / "hub" / name)
     copy_tree(torch_checkpoints(), models / "torch" / "hub" / "checkpoints")
+    copy_pose(models)
     copy_nltk(models / "nltk_data")
     size = sum(f.stat().st_size for f in models.rglob("*") if f.is_file())
     print(f"Modelle in {models}: {size / 1e9:.1f} GB")

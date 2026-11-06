@@ -35,10 +35,37 @@ def data_dir() -> Path:
     return d
 
 
+def hide_child_consoles() -> None:
+    """Die Exe hat keine Konsole: jedes Kommandozeilenprogramm, das eine Bibliothek ohne CREATE_NO_WINDOW startet,
+    bekäme sonst ein eigenes Fenster (bei Windows Terminal als Standard sichtbar). Darum erzwingt die Exe das
+    Flag für alle Unterprozesse und protokolliert die Befehle ins Log."""
+    import subprocess
+    import traceback
+
+    if os.name != "nt" or getattr(subprocess.Popen, "_visualcut_hidden", False):
+        return
+    original = subprocess.Popen.__init__
+
+    def init(self, *args, **kwargs):
+        flags = kwargs.get("creationflags", 0) or 0
+        if not flags & (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_CONSOLE):
+            kwargs["creationflags"] = flags | subprocess.CREATE_NO_WINDOW
+        cmd = args[0] if args else kwargs.get("args")
+        caller = next((f"{fr.filename}:{fr.lineno}" for fr in reversed(traceback.extract_stack(limit=8)[:-1])
+                       if "subprocess" not in fr.filename), "?")
+        if sys.stderr is not None:
+            print(f"[subprocess] {str(cmd)[:160]} <- {caller}", file=sys.stderr, flush=True)
+        original(self, *args, **kwargs)
+
+    subprocess.Popen.__init__ = init
+    subprocess.Popen._visualcut_hidden = True
+
+
 def prepare_environment() -> None:
     """Pfade für das Bundle setzen, bevor das Backend importiert wird."""
     root = bundle_dir()
     if root is not None:
+        hide_child_consoles()
         os.environ.setdefault("VISUALCUT_UI_DIST", str(root / "ui"))
         ffbin = root / "ffmpeg"
         if ffbin.is_dir():

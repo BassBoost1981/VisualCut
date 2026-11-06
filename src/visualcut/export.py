@@ -10,7 +10,7 @@ from xml.etree import ElementTree as ET
 import opentimelineio as otio
 
 from .decisions import for_export
-from .ingest import run
+from .ingest import h264_args, run
 from .schema import Cut, Event, EventStatus, MediaInfo
 
 REASON_COLORS = {
@@ -242,5 +242,5 @@ def render_preview(media: MediaInfo, cuts: list[Cut], out: Path, include_open: b
         maps = ["-map", "[v]"]
     out.parent.mkdir(parents=True, exist_ok=True)
     run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-filter_complex", "".join(parts), *maps,
-         "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", str(out)])
+         *h264_args(20), "-pix_fmt", "yuv420p", "-c:a", "aac", str(out)])
     return out
