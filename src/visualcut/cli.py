@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from . import __version__, decisions as decisions_mod, export as export_mod, pipeline
 from .cache import stderr_progress
 from .ingest import StageError
-from .schema import CutStatus, EventJudgments, SemanticSubmission, Stage, json_schema
+from .schema import CutReason, CutStatus, EventJudgments, SemanticSubmission, Stage, json_schema
 from .semantic import DEFAULT_MODEL, load_prompt
 
 EXIT_OK, EXIT_INPUT, EXIT_STAGE, EXIT_CACHE = 0, 2, 3, 4
@@ -149,6 +149,47 @@ def decide(
             raise ValueError(f"Unbekannte Cut-ID {cut_id}")
         d = decisions_mod.set_status(cache, cut_id, status, note)
         _out(d, json_, f"{cut_id}: {status.value}")
+
+    _guard(go, json_)
+
+
+@app.command()
+def mark(
+    video: VideoArg,
+    start_word: Annotated[int, typer.Argument(help="Erste Wort-ID (aus visualcut transcript)")],
+    end_word: Annotated[int, typer.Argument(help="Letzte Wort-ID, einschließlich")],
+    reason: Annotated[CutReason, typer.Option("--reason")] = CutReason.redundant,
+    note: Annotated[str, typer.Option("--note")] = "",
+    json_: JsonFlag = False,
+    cache_dir: CacheOpt = None,
+) -> None:
+    """Wortspanne als manuellen Cut speichern (manual.json, sofort angenommen) und die Fusion neu rechnen."""
+
+    def go():
+        cache = pipeline.cache_for(video, cache_dir)
+        cut, analysis = pipeline.mark(cache, start_word, end_word, reason, note, stderr_progress if json_ else None)
+        fused = [c for c in analysis.cuts if c.id == cut.id or c.id.startswith(cut.id + ".")]
+        _out({"cut": cut.model_dump(mode="json"), "fused": [c.model_dump(mode="json") for c in fused],
+              "cuts": len(analysis.cuts)}, json_,
+             f"{cut.id}: Wörter {start_word}-{end_word} ({reason.value}), " + (
+                 ", ".join(f"{c.start:.3f}-{c.end:.3f}" for c in fused) or "nach der Fusion leer"))
+
+    _guard(go, json_)
+
+
+@app.command()
+def unmark(
+    video: VideoArg,
+    cut_id: Annotated[str, typer.Argument(help="ID des manuellen Cuts (manual-<start>-<end>)")],
+    json_: JsonFlag = False,
+    cache_dir: CacheOpt = None,
+) -> None:
+    """Manuellen Cut löschen und die Fusion neu rechnen."""
+
+    def go():
+        cache = pipeline.cache_for(video, cache_dir)
+        cut, analysis = pipeline.unmark(cache, cut_id, stderr_progress if json_ else None)
+        _out({"removed": cut.id, "cuts": len(analysis.cuts)}, json_, f"{cut.id} gelöscht")
 
     _guard(go, json_)
 

@@ -1,7 +1,7 @@
 /* Generiert aus `visualcut schema` (npm run types). Nicht von Hand ändern. */
 
 export type VisualCutSchema =
-  Analysis | Decisions | ProgressEvent | Cut | EventCatalog | EventsResult | EventJudgments;
+  Analysis | Decisions | ProgressEvent | Cut | EventCatalog | EventsResult | EventJudgments | ManualCuts;
 export type EventStatus = "confirmed" | "candidate";
 /**
  * Wirkung eines Event-Typs: Highlight-Kandidat, nur Marker, oder Schnitt-Kandidat.
@@ -345,4 +345,12 @@ export interface EventJudgment {
 export interface EventJudgments {
   source?: string;
   judgments?: EventJudgment[];
+}
+/**
+ * manual.json: Cuts, die der Mensch im Transkript markiert hat (source=manual, nur Wort-IDs).
+ */
+export interface ManualCuts {
+  schema_version?: number;
+  content_hash: string;
+  cuts?: Cut[];
 }

@@ -87,7 +87,7 @@ def analyze(
 def get_cuts(
     path: str, min_confidence: float = 0.0, reasons: list[str] | None = None, status: CutStatus | None = None,
 ) -> dict[str, Any]:
-    """Gefilterte Cut-Liste aus dem Cache: Wort-IDs, Sekunden, Frames, reason, confidence, source (rule/llm),
+    """Gefilterte Cut-Liste aus dem Cache: Wort-IDs, Sekunden, Frames, reason, confidence, source (rule/llm/manual: vom Menschen im Transkript markiert),
     note (Begründung) und status aus decisions.json. reasons z. B. ["retake", "tangent"]."""
     _, analysis = pipeline.require_analysis(_video(path))
     sel = pipeline.select_cuts(analysis.cuts, min_confidence, status, reasons)

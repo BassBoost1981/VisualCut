@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schema import Cut, CutReason, CutStatus, Event, EventEffect, EventStatus, Highlight, SceneChange, SilenceInterval, Word
+from .schema import Cut, CutReason, CutSource, CutStatus, Event, EventEffect, EventStatus, Highlight, SceneChange, SilenceInterval, Word
 
 SNAP_WINDOW = 0.300
 PRE_ROLL = 0.080
@@ -27,6 +27,11 @@ REASON_PRIORITY = {
     CutReason.retake: 5, CutReason.false_start: 4, CutReason.redundant: 3, CutReason.tangent: 3,
     CutReason.long_pause: 2, CutReason.technical: 2, CutReason.filler: 1,
 }
+
+
+def merge_rank(cut: Cut) -> tuple[bool, int, float]:
+    """Wer beim Zusammenführen führt: ein manueller Cut immer, sonst der stärkere Grund, dann die Konfidenz."""
+    return cut.source == CutSource.manual, REASON_PRIORITY.get(cut.reason, 0), cut.confidence
 
 
 @dataclass
@@ -117,8 +122,7 @@ def _clamp_to_kept_words(span: _Span, words: list[Word], removed_ids: set[int]) 
 
 
 def _merge(a: _Span, b: _Span) -> _Span:
-    pa, pb = REASON_PRIORITY.get(a.cut.reason, 0), REASON_PRIORITY.get(b.cut.reason, 0)
-    lead = a if (pa, a.cut.confidence) >= (pb, b.cut.confidence) else b
+    lead = a if merge_rank(a.cut) >= merge_rank(b.cut) else b
     other = b if lead is a else a
     cut = replace(
         lead.cut,
@@ -178,10 +182,14 @@ def _blocking(events: list[Event] | None) -> list[Event]:
 
 def _respect_events(spans: list[_Span], events: list[Event], words: list[Word], fps: float) -> list[_Span]:
     """Regel 8: Kein Schnitt mitten in ein bestätigtes Event. Liegt der Cut ganz im Event, entfällt er; ragt er
-    hinein, endet er am Event-Start bzw. beginnt am Event-Ende, aus angeschnittenen Wörtern heraus geschoben."""
+    hinein, endet er am Event-Start bzw. beginnt am Event-Ende, aus angeschnittenen Wörtern heraus geschoben.
+    Manuelle Cuts bleiben, wie sie sind: der Mensch hat bewusst hier geschnitten."""
     eps = 1.0 / fps
     out: list[_Span] = []
     for sp in spans:
+        if sp.cut.source == CutSource.manual:
+            out.append(sp)
+            continue
         s, e = sp.start, sp.end
         hit: list[str] = []
         dropped = False

@@ -27,6 +27,8 @@ visualcut events input.mp4 --json               # Stufe 1b rechnen bzw. aus dem 
 visualcut events input.mp4 --json --pending     # dazu die offenen Fenster für Ebene C mit Pfaden zu den Einzelbildern
 visualcut events input.mp4 --judge urteile.json --source agent:claude-code   # Ebene C ohne API-Key: Urteile des Agenten
 visualcut decide input.mp4 <cut-id> accepted|rejected|open --note "..."
+visualcut mark input.mp4 12 18 --reason redundant --note "..."   # Wörter 12 bis 18 als manuellen Cut (sofort angenommen)
+visualcut unmark input.mp4 manual-12-18
 visualcut export input.mp4 --format fcpxml --out schnitt.fcpxml
 visualcut export input.mp4 --format edl --out schnitt.edl
 visualcut export input.mp4 --format markers-edl --out marker.edl   # Resolve: Timeline > Import > Timeline Markers from EDL (mit Farben)
@@ -42,7 +44,8 @@ Exit-Codes: 0 ok, 2 Eingabefehler, 3 Stufe fehlgeschlagen, 4 Cache ungültig.
 - Cache: `.visualcut/<content-hash>/` im Arbeitsverzeichnis (überschreibbar mit `VISUALCUT_CACHE`). Pro Stufe eine JSON-Datei (`ingest.json`, `technical.json`, `speech.json`, `semantic.json`, `fusion.json`). Fertige Stufen werden übersprungen, `--force` erzwingt Neuberechnung. Kommt `semantic.json` neu dazu, rechnet die Fusion automatisch neu (`fusion.json` merkt sich das LLM-Modell).
 - `decisions.json` im selben Ordner: angenommen/verworfen pro Cut. Export, CLI, API und MCP lesen dieselbe Datei über `visualcut.decisions`.
 - Status eines Cuts: `open`, `accepted`, `rejected`. Offene Cuts werden beim Export als Marker gesetzt (Option `--open-as-cut`, um sie zu schneiden), verworfene fehlen.
-- Jeder Cut hat `source` (`rule` oder `llm`), `reason`, `confidence`, `note` (Begründung) und `maybe` (Konfidenz unter 0,6).
+- Jeder Cut hat `source` (`rule`, `llm` oder `manual`), `reason`, `confidence`, `note` (Begründung) und `maybe` (Konfidenz unter 0,6).
+- `manual.json` im selben Ordner: Cuts, die der Mensch im Transkript markiert hat (UI: Wörter markieren, CLI `mark`), nur Wort-IDs, ID `manual-<start>-<end>`, sofort `accepted`. Die Fusion nimmt sie wie Regel- und LLM-Cuts auf und snappt sie gleich; bei Überlappung führt der manuelle Cut (`fusion.merge_rank`), und Regel 8 streicht ihn nicht. `long_pause` ist als Grund nicht erlaubt.
 - `events.json` (Stufe 1b): finale Events, Rohdetektionen pro Quelle, offene Fenster für Ebene C, Urteile, Bewegungsenergie bei 5 fps. Einzelbilder der Fenster unter `event_frames/`. `events.yaml` im Repo-Root ist die Ereignisliste; eine `events.yaml` im Cache-Ordner eines Projekts hat Vorrang, `VISUALCUT_EVENTS` zeigt auf eine andere globale Datei. Ändern sich Prompts, rechnet Stufe 1b beim nächsten Lauf neu; Anzeigename und Wirkung wirken ohne Neuberechnung.
 - `analysis.json` enthält `events` (nur die finalen) und `highlights` mit Sekunden (nach der Fusion an Events ausgerichtet). `fusion.json` merkt sich einen Fingerabdruck der Events und rechnet neu, wenn sie sich ändern.
 
@@ -84,7 +87,7 @@ Ohne `ANTHROPIC_API_KEY` oder mit `--no-llm` wird die Stufe als `stage_skipped` 
 ## API (`visualcut serve`, Port 8765)
 
 `GET /projects`, `GET /projects/{hash}`, `POST /analyze` (Job, Felder `llm`, `llm_model`, `events`, `vision`), `GET /jobs/{id}`, `WS /ws/progress/{id}`,
-`GET /projects/{hash}/cuts?reason=retake`, `PUT /projects/{hash}/decisions/{cut_id}`, `POST /projects/{hash}/export`, `POST /projects/{hash}/render`.
+`GET /projects/{hash}/cuts?reason=retake`, `PUT /projects/{hash}/decisions/{cut_id}`, `GET`/`POST /projects/{hash}/manual`, `DELETE /projects/{hash}/manual/{cut_id}`, `POST /projects/{hash}/export`, `POST /projects/{hash}/render`.
 `GET /projects/{hash}/files/{proxy|audio}` streamt Proxy-MP4 und WAV aus dem Cache (Range-Requests für den Player).
 `GET /projects/{hash}/events?pending=true` (dasselbe JSON wie `visualcut events --json`), `POST /projects/{hash}/events/judgments` (`EventJudgments`),
 `GET`/`PUT /events/catalog` lesen und schreiben die globale `events.yaml` (der Kommentarkopf bleibt erhalten).
