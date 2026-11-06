@@ -32,6 +32,18 @@ describe("api client", () => {
     expect(JSON.parse(init.body as string)).toEqual({ status: "accepted", note: "ok" });
   });
 
+  it("legt manuelle Cuts per POST an und löscht sie per DELETE", async () => {
+    const fetch = mockFetch(200, { id: "manual-3-5" });
+    await api.addManualCut("abc", { start_word: 3, end_word: 5, reason: "redundant" });
+    await api.deleteManualCut("abc", "manual-3-5");
+    const [[url1, init1], [url2, init2]] = fetch.mock.calls as unknown as [string, RequestInit][];
+    expect(url1).toBe("/projects/abc/manual");
+    expect(init1.method).toBe("POST");
+    expect(JSON.parse(init1.body as string)).toEqual({ start_word: 3, end_word: 5, reason: "redundant" });
+    expect(url2).toBe("/projects/abc/manual/manual-3-5");
+    expect(init2.method).toBe("DELETE");
+  });
+
   it("wirft ApiError mit detail", async () => {
     mockFetch(404, { detail: "Projekt fehlt" });
     await expect(api.getCuts("nope")).rejects.toMatchObject(new ApiError(404, "Projekt fehlt"));

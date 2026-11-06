@@ -10,11 +10,13 @@ interface Props {
   onDecide: (status: CutStatus) => void;
   onJump: () => void;
   pending: boolean;
+  /** Nur für manuelle Cuts: aus manual.json löschen */
+  onDelete: () => void;
 }
 
 const SOURCE_LABEL = { rule: "Regel", llm: "LLM", manual: "manuell" };
 
-export function CutPanel({ cut, words, fps, onDecide, onJump, pending }: Props) {
+export function CutPanel({ cut, words, fps, onDecide, onJump, pending, onDelete }: Props) {
   if (!cut) {
     return (
       <section aria-label="Ausgewählter Cut" className="rounded-2xl border border-line bg-panel px-5 py-4 text-sm text-text-muted">
@@ -96,6 +98,11 @@ export function CutPanel({ cut, words, fps, onDecide, onJump, pending }: Props) 
         <Button variant="ghost" size="sm" onPress={() => onDecide("open")} isDisabled={pending || status === "open"}>
           Wieder öffnen
         </Button>
+        {cut.source === "manual" && (
+          <Button variant="danger-soft" size="sm" onPress={onDelete} isDisabled={pending}>
+            Manuellen Cut löschen (Entf)
+          </Button>
+        )}
       </div>
     </section>
   );

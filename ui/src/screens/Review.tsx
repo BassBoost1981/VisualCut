@@ -2,13 +2,14 @@ import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { mediaUrl } from "../api/client";
-import { useCuts, useDecide, useProject } from "../api/queries";
-import type { Cut, CutStatus } from "../api/types";
+import { useCuts, useDecide, useMarkCut, useProject, useUnmarkCut } from "../api/queries";
+import type { Cut, CutReason, CutStatus } from "../api/types";
 import { CutPanel } from "../components/CutPanel";
 import { Player, seekBy } from "../components/Player";
 import { Timeline } from "../components/Timeline";
 import { Transcript } from "../components/Transcript";
 import { basename, fmtDuration, fmtPercent } from "../lib/format";
+import type { WordRange } from "../lib/manual";
 import { useReview } from "../lib/review-store";
 import { navigate } from "../lib/router";
 import { useSettings } from "../lib/settings";
@@ -17,13 +18,15 @@ export function Review({ hash }: { hash: string }) {
   const project = useProject(hash);
   const cutsQuery = useCuts(hash);
   const decide = useDecide(hash);
+  const markCut = useMarkCut(hash);
+  const unmarkCut = useUnmarkCut(hash);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const { selectedCutId, select, reasonFilter, onlyOpen, onlyMaybe } = useReview();
+  const { selectedCutId, select, reasonFilter, onlyOpen, onlyMaybe, setMarked } = useReview();
   const setLastHash = useSettings((s) => s.setLastHash);
 
   useEffect(() => setLastHash(hash), [hash, setLastHash]);
-  useEffect(() => () => select(null), [select]);
+  useEffect(() => () => { select(null); setMarked(null); }, [select, setMarked]);
 
   // Zeit per requestAnimationFrame, damit Cursor und Mitlauf flüssig sind
   useEffect(() => {
@@ -45,7 +48,11 @@ export function Review({ hash }: { hash: string }) {
         .sort((a, b) => (a.start ?? 0) - (b.start ?? 0)),
     [allCuts, reasonFilter, onlyOpen, onlyMaybe],
   );
-  const selected = useMemo(() => allCuts.find((c) => c.id === selectedCutId) ?? null, [allCuts, selectedCutId]);
+  // Ein manueller Cut kann nach der Fusion an einer Szene geteilt sein (`<id>.0`): dann den ersten Teil zeigen
+  const selected = useMemo(
+    () => allCuts.find((c) => c.id === selectedCutId) ?? allCuts.find((c) => selectedCutId != null && c.id.startsWith(`${selectedCutId}.`)) ?? null,
+    [allCuts, selectedCutId],
+  );
   const activeCut = useMemo(
     () => allCuts.find((c) => c.status !== "rejected" && c.start != null && c.end != null && currentTime >= c.start && currentTime < c.end) ?? null,
     [allCuts, currentTime],
@@ -92,6 +99,19 @@ export function Review({ hash }: { hash: string }) {
     [selected, decide, visible, jumpTo],
   );
 
+  const mark = useCallback(
+    (range: WordRange, reason: CutReason) =>
+      markCut.mutate(
+        { start_word: range[0], end_word: range[1], reason },
+        { onSuccess: (cut) => { setMarked(null); select(cut.id); } },
+      ),
+    [markCut, setMarked, select],
+  );
+  const deleteSelected = useCallback(() => {
+    if (selected?.source !== "manual") return;
+    unmarkCut.mutate(selected.id, { onSuccess: () => select(null) });
+  }, [selected, unmarkCut, select]);
+
   const opts = { preventDefault: true, enableOnFormTags: false };
   useHotkeys("space", () => { const v = videoRef.current; if (!v) return; if (v.paused) void v.play(); else v.pause(); }, opts, []);
   useHotkeys("k", () => videoRef.current?.pause(), opts, []);
@@ -104,6 +124,7 @@ export function Review({ hash }: { hash: string }) {
   useHotkeys("o", () => decideSelected("open", false), opts, [decideSelected]);
   useHotkeys("down, n", () => step(1), opts, [step]);
   useHotkeys("up, p", () => step(-1), opts, [step]);
+  useHotkeys("delete", deleteSelected, opts, [deleteSelected]);
   useHotkeys("enter", () => { if (selected) jumpTo(selected); }, opts, [selected, jumpTo]);
 
   if (project.isLoading || cutsQuery.isLoading) return <div className="p-6"><Spinner /></div>;
@@ -155,6 +176,7 @@ export function Review({ hash }: { hash: string }) {
         </div>
         <div className="ml-auto flex gap-2">
           {decide.error && <span className="self-center text-xs text-[#F31260]">Speichern fehlgeschlagen: {decide.error.message}</span>}
+          {unmarkCut.error && <span className="self-center text-xs text-[#F31260]">Löschen fehlgeschlagen: {unmarkCut.error.message}</span>}
           <Button variant="primary" onPress={() => navigate({ screen: "export", hash })}>
             Exportieren
           </Button>
@@ -189,12 +211,21 @@ export function Review({ hash }: { hash: string }) {
             cut={selected}
             words={words}
             fps={media.fps}
-            pending={decide.isPending}
+            pending={decide.isPending || unmarkCut.isPending}
             onDecide={(s) => decideSelected(s, s !== "open")}
             onJump={() => selected && jumpTo(selected)}
+            onDelete={deleteSelected}
           />
         </div>
-        <Transcript words={words} cuts={visible} currentTime={currentTime} onSeek={seek} />
+        <Transcript
+          words={words}
+          cuts={visible}
+          currentTime={currentTime}
+          onSeek={seek}
+          onMark={mark}
+          markPending={markCut.isPending}
+          markError={markCut.error?.message ?? null}
+        />
       </div>
     </div>
   );

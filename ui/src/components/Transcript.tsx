@@ -1,9 +1,11 @@
 import { Label, Switch } from "@heroui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import type { Cut, CutReason, Word } from "../api/types";
 import { fmtDuration } from "../lib/format";
 import { REASON_COLOR, REASON_LABEL, REASONS } from "../lib/reasons";
+import { DEFAULT_MANUAL_REASON, MANUAL_REASONS, rangeText, wordIdAt, wordRange, type WordRange } from "../lib/manual";
 import { useReview } from "../lib/review-store";
 
 interface Props {
@@ -11,6 +13,10 @@ interface Props {
   cuts: Cut[];
   currentTime: number;
   onSeek: (t: number) => void;
+  /** Markierte Wortspanne als manuellen Cut speichern */
+  onMark: (range: WordRange, reason: CutReason) => void;
+  markPending: boolean;
+  markError: string | null;
 }
 
 interface Row {
@@ -22,9 +28,31 @@ const GAP_S = 1.0;
 const MAX_WORDS = 40;
 
 /** Transkript als virtualisierte Absätze. Wörter in Cuts sind nach Grund eingefärbt, das aktuelle Wort läuft mit. */
-export function Transcript({ words, cuts, currentTime, onSeek }: Props) {
+export function Transcript({ words, cuts, currentTime, onSeek, onMark, markPending, markError }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const { selectedCutId, select, follow, setFollow, reasonFilter, setReasonFilter, onlyOpen, setOnlyOpen, onlyMaybe, setOnlyMaybe } = useReview();
+  const { selectedCutId, select, follow, setFollow, reasonFilter, setReasonFilter, onlyOpen, setOnlyOpen, onlyMaybe, setOnlyMaybe, marked, setMarked } = useReview();
+  const anchorRef = useRef<number | null>(null); // letztes angeklicktes Wort, Startpunkt für Shift-Klick
+  const draggedRef = useRef(false); // der folgende Klick gehört zu einer Zieh-Markierung
+  const [markReason, setMarkReason] = useState<CutReason>(DEFAULT_MANUAL_REASON);
+
+  // Markierung per Ziehen: native Textauswahl auf Wort-IDs abbilden, dann die eigene Hervorhebung zeigen
+  const onMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const a = wordIdAt(sel.anchorNode);
+    const b = wordIdAt(sel.focusNode);
+    sel.removeAllRanges();
+    if (a != null && b != null) {
+      draggedRef.current = true;
+      setMarked(wordRange(a, b));
+    }
+  };
+  const save = () => {
+    if (marked && !markPending) onMark(marked, markReason);
+  };
+  const opts = { preventDefault: true, enableOnFormTags: false };
+  useHotkeys("x", save, opts, [marked, markReason, markPending, onMark]);
+  useHotkeys("escape", () => setMarked(null), { enableOnFormTags: true }, [setMarked]);
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -141,7 +169,7 @@ export function Transcript({ words, cuts, currentTime, onSeek }: Props) {
         </div>
       </div>
 
-      <div ref={parentRef} className="min-h-0 flex-1 overflow-auto px-4 py-3">
+      <div ref={parentRef} className="min-h-0 flex-1 overflow-auto px-4 py-3" onMouseDown={() => (draggedRef.current = false)} onMouseUp={onMouseUp}>
         {words.length === 0 && <p className="text-sm text-text-muted">Kein Transkript (Stufe 2 fehlt oder keine Tonspur).</p>}
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {virtualizer.getVirtualItems().map((item) => {
@@ -163,18 +191,32 @@ export function Transcript({ words, cuts, currentTime, onSeek }: Props) {
                     const color = cut ? REASON_COLOR[cut.reason] : undefined;
                     const rejected = cut?.status === "rejected";
                     const open = cut?.status === "open";
+                    const isMarked = marked != null && w.id >= marked[0] && w.id <= marked[1];
                     return (
                       <span
                         key={w.id}
                         role="button"
                         tabIndex={-1}
-                        onClick={() => {
+                        data-word-id={w.id}
+                        onClick={(e) => {
+                          if (e.shiftKey && anchorRef.current != null) {
+                            setMarked(wordRange(anchorRef.current, w.id));
+                            return;
+                          }
+                          if (draggedRef.current) {
+                            draggedRef.current = false;
+                            return;
+                          }
+                          anchorRef.current = w.id;
+                          setMarked(null);
                           onSeek(w.start);
                           if (cut) select(cut.id);
                         }}
                         className={`cursor-pointer rounded px-0.5 ${isCurrent ? "bg-[#0b2447] font-semibold text-text" : ""} ${cut && !rejected ? "line-through" : ""}`}
                         style={
-                          cut
+                          isMarked
+                            ? { background: "#006FEE55", color: "#ECEDEE", boxShadow: "0 0 0 1px #006FEE" }
+                            : cut
                             ? {
                                 color: rejected ? "#71717A" : color,
                                 background: isCurrent ? undefined : rejected ? "transparent" : `${color}22`,
@@ -196,10 +238,48 @@ export function Transcript({ words, cuts, currentTime, onSeek }: Props) {
           })}
         </div>
       </div>
-      <div className="flex gap-3 border-t border-line px-4 py-2.5 text-xs text-text-muted">
-        <span>Klick auf Wort springt im Video</span>
-        <span className="ml-auto">Durchgestrichen = Cut, gestrichelt = offen</span>
-      </div>
+      {marked ? (
+        <div role="region" aria-label="Markierung" className="flex flex-col gap-2 border-t border-primary bg-[#0b2447] px-4 py-2.5 text-xs">
+          <div className="text-text">
+            <span className="font-semibold">Wort {marked[0]}{marked[1] !== marked[0] && ` bis ${marked[1]}`}</span>
+            <span className="text-text-muted"> · {rangeText(words, marked)}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-text-muted">
+              Grund
+              <select
+                aria-label="Grund des manuellen Cuts"
+                value={markReason}
+                onChange={(e) => setMarkReason(e.target.value as CutReason)}
+                className="rounded-md border border-line-light bg-panel px-2 py-1 text-text"
+              >
+                {MANUAL_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {REASON_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={save}
+              disabled={markPending}
+              className="rounded-md bg-primary px-3 py-1 font-semibold text-white disabled:opacity-50"
+            >
+              {markPending ? "Speichere …" : "Als Cut speichern (X)"}
+            </button>
+            <button type="button" onClick={() => setMarked(null)} className="rounded-md px-2 py-1 text-text-muted hover:text-text">
+              Abbrechen (Esc)
+            </button>
+            {markError && <span className="text-[#F31260]">{markError}</span>}
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3 border-t border-line px-4 py-2.5 text-xs text-text-muted">
+          <span>Klick springt · Ziehen oder Shift-Klick markiert</span>
+          <span className="ml-auto">Durchgestrichen = Cut, gestrichelt = offen</span>
+        </div>
+      )}
     </aside>
   );
 }

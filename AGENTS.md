@@ -98,7 +98,7 @@ OpenAPI unter `/docs`. `GET /cuts` liefert exakt das JSON von `visualcut cuts --
 Vite, React 19, TypeScript, HeroUI 3, Tailwind 4, TanStack Query/Virtual, Zustand, wavesurfer.js, react-hotkeys-hook.
 Screens: Start (Pfad eintragen, Projektliste), Analyse (Stepper + Live-Log aus `/ws/progress/{id}`), Review (Player auf dem
 Proxy, Wellenform mit Cut-Regionen, Transkript mit Mitlauf, Tasten J/K/L, Leertaste, A annehmen, R verwerfen, O öffnen,
-↑/↓ Cut wechseln, Event-Spur unter der Wellenform: bestätigt grün `#17C964`, Kandidaten gestrichelt, Klick springt 0,5 s davor),
+↑/↓ Cut wechseln, Wörter im Transkript markieren (Ziehen oder Shift-Klick) und mit X als manuellen Cut speichern, Entf löscht ihn, Event-Spur unter der Wellenform: bestätigt grün `#17C964`, Kandidaten gestrichelt, Klick springt 0,5 s davor),
 Export, Einstellungen (Whisper-Modell, Sprache, Stufe im localStorage; Editor für `events.yaml` mit Vision-Budget über die API).
 Der Analyse-Stepper zeigt die Stufen 0, 1, 1b, 2, 3 und 4.
 
