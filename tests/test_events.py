@@ -277,7 +277,8 @@ def test_events_on_words_spoken_and_silent():
 def test_repo_catalog_is_valid_and_project_overrides(tmp_path: Path):
     cat = catalog.load()
     types = {d.type for d in cat.events}
-    assert {"dancing", "laughing", "applause", "music", "nothing"} <= types and cat.vision_budget == 40
+    # Katalog ist nutzereditierbar: Pflichttypen und Gültigkeit prüfen, keine festen Zahlen
+    assert {"dancing", "laughing", "applause", "music", "nothing"} <= types and cat.vision_budget > 0
     assert all(d.label for d in cat.events) and catalog.parse(catalog.dump(cat)) == cat
     cache = ProjectCache("p", tmp_path)
     catalog.save(CAT, catalog.project_path(cache))
@@ -335,7 +336,7 @@ def test_api_catalog_roundtrip_keeps_header(analyzed: ProjectCache, tmp_path: Pa
     monkeypatch.setenv("VISUALCUT_CACHE", str(analyzed.dir.parent))
     client = TestClient(create_app())
     info = client.get("/events/catalog").json()
-    assert info["path"] == str(target) and info["catalog"]["vision_budget"] == 40
+    assert info["path"] == str(target) and info["catalog"]["vision_budget"] == catalog.parse(target.read_text(encoding="utf-8")).vision_budget
     cat = info["catalog"]
     cat["vision_budget"] = 12
     cat["events"].append({"type": "drinking_coffee", "label": "Kaffee", "prompt": "person drinking coffee", "effect": "cut"})

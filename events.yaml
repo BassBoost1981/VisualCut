@@ -12,67 +12,357 @@
 #
 # Pro Projekt überschreibbar: eine events.yaml im Cache-Ordner .visualcut/<hash>/ hat Vorrang.
 version: 1
-vision_budget: 40
+vision_budget: 110
 events:
+  # --- Highlights ---
   - type: dancing
     label: Tanzen
     prompt: person dancing
     kinetics: [danc, zumba, krumping, moon walking, tango, salsa, jumpstyle]
     effect: highlight
     motion: true
-  - type: talking
-    label: Spricht in die Kamera
-    prompt: person talking to camera
-    audio_prompt: a person speaking
-    background: true
-  - type: standing_up
-    label: Steht auf
-    prompt: person standing up
-    effect: marker
-    motion: true
-  - type: sitting_down
-    label: Setzt sich
-    prompt: person sitting down
-    effect: marker
-    motion: true
-  - type: walking
-    label: Geht
-    prompt: person walking
-    effect: marker
-    motion: true
-  - type: showing_object
-    label: Zeigt etwas in die Kamera
-    prompt: person holding object towards camera
-    effect: highlight
-  - type: pointing
-    label: Zeigt auf den Bildschirm
-    prompt: person pointing at screen
-    effect: marker
-  - type: drinking
-    label: Trinkt
-    prompt: person drinking
-    kinetics: [drinking]
-    effect: cut
+
   - type: laughing
     label: Lacht
     prompt: person laughing
     audio_prompt: people laughing out loud
     kinetics: [laughing]
     effect: highlight
+
   - type: applause
     label: Applaus
     audio_prompt: applause and clapping
     effect: highlight
+
+  - type: showing_object
+    label: Zeigt etwas in die Kamera
+    prompt: person holding object towards camera
+    effect: highlight
+
+  - type: jumping
+    label: Springt
+    prompt: person jumping
+    kinetics: [jump, jumping]
+    effect: highlight
+    motion: true
+
+  - type: waving
+    label: Winkt
+    prompt: person waving hand
+    effect: highlight
+    motion: true
+
+  - type: celebrating
+    label: Feiert / Jubelt
+    prompt: person celebrating cheering
+    audio_prompt: people cheering celebrating
+    kinetics: [cheer, celebrate]
+    effect: highlight
+    motion: true
+
+  - type: singing
+    label: Singt
+    prompt: person singing
+    audio_prompt: person singing
+    effect: highlight
+
+  - type: playing_instrument
+    label: Spielt Instrument
+    prompt: person playing musical instrument
+    audio_prompt: musical instrument playing
+    kinetics: [playing, guitar, piano, drum]
+    effect: highlight
+
+  - type: hugging
+    label: Umarmung
+    prompt: people hugging
+    effect: highlight
+    motion: true
+
+  # --- Sexy / Aufreizende Posen & Close-ups ---
+  - type: bending_forward
+    label: Beugt sich nach vorne
+    prompt: person bending forward
+    effect: highlight
+    motion: true
+
+  - type: view_from_behind
+    label: Ansicht von hinten
+    prompt: person from behind showing back and butt
+    effect: highlight
+
+  - type: closeup_face
+    label: Close-up Gesicht
+    prompt: closeup of a persons face
+    effect: highlight
+
+  - type: closeup_cleavage
+    label: Close-up Ausschnitt
+    prompt: closeup of cleavage breasts
+    effect: highlight
+
+  - type: closeup_lips
+    label: Close-up Lippen
+    prompt: closeup of lips mouth
+    effect: highlight
+
+  - type: closeup_hips
+    label: Close-up Hüfte / Po
+    prompt: closeup of hips butt
+    effect: highlight
+
+  - type: looking_over_shoulder
+    label: Blick über die Schulter
+    prompt: person looking over shoulder
+    effect: highlight
+
+  - type: sitting_legs_crossed
+    label: Sitzt mit überschlagenen Beinen
+    prompt: person sitting with legs crossed
+    effect: highlight
+
+  - type: lying_down
+    label: Liegt
+    prompt: person lying down on bed
+    effect: highlight
+    motion: true
+
+  - type: stretching
+    label: Streckt sich
+    prompt: person stretching body
+    effect: highlight
+    motion: true
+
+  - type: posing
+    label: Posiert sexy
+    prompt: person posing provocatively
+    effect: highlight
+
+  - type: removing_clothes
+    label: Zieht Kleidung aus
+    prompt: person taking off clothes undressing
+    effect: highlight
+    motion: true
+
+  - type: biting_lip
+    label: Beißt sich auf die Lippe
+    prompt: person biting lip
+    effect: highlight
+
+  - type: touching_hair
+    label: Spielt mit den Haaren
+    prompt: person touching playing with hair
+    effect: highlight
+    motion: true
+
+  - type: closeup_legs
+    label: Close-up Beine
+    prompt: closeup of legs thighs
+    effect: highlight
+
+  - type: dancing_suggestive
+    label: Aufreizendes Tanzen
+    prompt: person dancing provocatively seductively
+    effect: highlight
+    motion: true
+
+  - type: sitting_on_lap
+    label: Sitzt auf Schoß
+    prompt: person sitting on someones lap
+    effect: highlight
+
+  - type: looking_at_camera_seductive
+    label: Verführerischer Blick in die Kamera
+    prompt: person looking at camera seductively
+    effect: highlight
+
+  - type: kneeling
+    label: Kniet
+    prompt: person kneeling
+    effect: highlight
+    motion: true
+
+  - type: on_all_fours
+    label: Auf allen Vieren
+    prompt: person on all fours
+    effect: highlight
+
+  - type: arching_back
+    label: Wölbt den Rücken
+    prompt: person arching back
+    effect: highlight
+    motion: true
+
+  - type: hands_on_hips
+    label: Hände in die Hüften
+    prompt: person with hands on hips
+    effect: highlight
+
+  - type: touching_body
+    label: Berührt den Körper
+    prompt: person touching caressing own body
+    effect: highlight
+    motion: true
+
+  - type: closeup_belly
+    label: Close-up Bauch
+    prompt: closeup of belly navel stomach
+    effect: highlight
+
+  - type: closeup_neck
+    label: Close-up Hals / Dekolleté
+    prompt: closeup of neck collarbone
+    effect: highlight
+
+  - type: spreading_legs
+    label: Spreizt die Beine
+    prompt: person spreading legs
+    effect: highlight
+    motion: true
+
+  - type: leaning_against_wall
+    label: Lehnt an der Wand
+    prompt: person leaning against wall
+    effect: highlight
+
+  - type: twerking
+    label: Twerk
+    prompt: person twerking
+    effect: highlight
+    motion: true
+
+  - type: body_roll
+    label: Body Roll
+    prompt: person doing body roll dance move
+    effect: highlight
+    motion: true
+
+  - type: hair_flip
+    label: Hair Flip
+    prompt: person flipping hair
+    effect: highlight
+    motion: true
+
+  - type: blowing_kiss
+    label: Schickt einen Kuss
+    prompt: person blowing a kiss
+    effect: highlight
+
+  - type: lying_on_stomach
+    label: Liegt auf dem Bauch
+    prompt: person lying on stomach
+    effect: highlight
+
+  - type: sitting_on_floor
+    label: Sitzt auf dem Boden
+    prompt: person sitting on the floor
+    effect: highlight
+
+  # --- Marker ---
+  - type: standing_up
+    label: Steht auf
+    prompt: person standing up
+    effect: marker
+    motion: true
+
+  - type: sitting_down
+    label: Setzt sich
+    prompt: person sitting down
+    effect: marker
+    motion: true
+
+  - type: walking
+    label: Geht
+    prompt: person walking
+    effect: marker
+    motion: true
+
+  - type: pointing
+    label: Zeigt auf den Bildschirm
+    prompt: person pointing at screen
+    effect: marker
+
   - type: music
     label: Musik
     audio_prompt: music playing
     effect: marker
+
+  - type: looking_at_phone
+    label: Schaut aufs Handy
+    prompt: person looking at phone smartphone
+    effect: marker
+
+  - type: gesturing
+    label: Gestikuliert
+    prompt: person gesturing with hands
+    effect: marker
+    motion: true
+
+  - type: turning
+    label: Dreht sich
+    prompt: person turning around
+    effect: marker
+    motion: true
+
+  - type: entering_frame
+    label: Betritt das Bild
+    prompt: person entering the frame
+    effect: marker
+    motion: true
+
+  - type: exiting_frame
+    label: Verlässt das Bild
+    prompt: person leaving the frame walking out
+    effect: marker
+    motion: true
+
+  - type: writing
+    label: Schreibt
+    prompt: person writing
+    effect: marker
+
+  - type: eating
+    label: Isst
+    prompt: person eating
+    kinetics: [eating]
+    effect: marker
+
+  # --- Cuts ---
+  - type: drinking
+    label: Trinkt
+    prompt: person drinking
+    kinetics: [drinking]
+    effect: cut
+
   - type: empty_frame
     label: Niemand im Bild
     prompt: an empty room with nobody in it
     effect: cut
+
+  - type: phone_ringing
+    label: Telefon klingelt
+    audio_prompt: phone ringing
+    effect: cut
+
+  - type: door_sound
+    label: Türgeräusch
+    audio_prompt: door opening or closing
+    effect: cut
+
+  # --- Background / Vergleichsklassen ---
+  - type: talking
+    label: Spricht in die Kamera
+    prompt: person talking to camera
+    audio_prompt: a person speaking
+    background: true
+
   - type: nothing
     label: Nichts passiert
     prompt: nothing happening
     audio_prompt: silence
+    background: true
+
+  - type: sitting_still
+    label: Sitzt still
+    prompt: person sitting still
     background: true
