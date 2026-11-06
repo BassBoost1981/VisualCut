@@ -15,6 +15,7 @@ SNAP_WINDOW = 0.300
 PRE_ROLL = 0.080
 POST_ROLL = 0.120
 MIN_SEGMENT = 0.400
+MAX_KEPT_SILENCE = 0.250  # so viel Stille bleibt beim Snappen höchstens am behaltenen Material stehen
 MERGE_DISTANCE = 0.250
 MAYBE_BELOW = 0.6
 
@@ -54,7 +55,8 @@ def snap_start(t: float, silences: list[SilenceInterval]) -> float:
             d = 0.0 if s.start <= t <= s.end else t - s.end
             if best is None or d < best[0]:
                 best = (d, s)
-    return best[1].mid if best else t
+    # Bei langer Stille nicht die halbe Stille stehen lassen: höchstens MAX_KEPT_SILENCE am behaltenen Material
+    return min(best[1].mid, best[1].start + MAX_KEPT_SILENCE) if best else t
 
 
 def snap_end(t: float, silences: list[SilenceInterval]) -> float:
@@ -64,7 +66,7 @@ def snap_end(t: float, silences: list[SilenceInterval]) -> float:
             d = 0.0 if s.start <= t <= s.end else s.start - t
             if best is None or d < best[0]:
                 best = (d, s)
-    return best[1].mid if best else t
+    return max(best[1].mid, best[1].end - MAX_KEPT_SILENCE) if best else t
 
 
 def _split_at_scenes(span: _Span, scenes: list[SceneChange]) -> list[_Span]:
@@ -128,13 +130,17 @@ def _merge(a: _Span, b: _Span) -> _Span:
     return _Span(cut, min(a.start, b.start), max(a.end, b.end))
 
 
-def _merge_close(spans: list[_Span], duration: float, scenes: list[SceneChange]) -> list[_Span]:
+def _merge_close(spans: list[_Span], duration: float, scenes: list[SceneChange], kept: list[Word]) -> list[_Span]:
     spans = sorted(spans, key=lambda s: (s.start, s.end))
     scene_times = [s.time for s in scenes]
     out: list[_Span] = []
     for sp in spans:
         gap_has_scene = out and any(out[-1].end <= t <= sp.start for t in scene_times)
-        if out and sp.start - out[-1].end < MIN_SEGMENT and not gap_has_scene:
+        # Ein kurzer Rest mit behaltenen Wörtern bleibt stehen (z. B. das zweite „Natürlich nicht.“ nach einem
+        # Retake); nur reine Stille- oder Geräusch-Reste unter 400 ms werden mitgeschnitten
+        gap_has_word = out and any(w.start < sp.start and w.end > out[-1].end for w in kept)
+        if out and (sp.start < out[-1].end or (sp.start - out[-1].end < MIN_SEGMENT and not gap_has_word)) \
+                and not gap_has_scene:
             # überlappend, < 250 ms oder Restsegment < 400 ms, aber nie über einen Szenenwechsel hinweg
             out[-1] = _merge(out[-1], sp)
         else:
@@ -272,6 +278,12 @@ def fuse(
         if not is_gap:
             removed_ids.update(range(cut.start_word, cut.end_word + 1))
         s, e = snap_start(ws, silences), snap_end(we, silences)  # Regel 2
+        # Snappen darf nie über ein Wort außerhalb des Cuts hinweg greifen: Stille-Erkennung und Alignment
+        # widersprechen sich manchmal (Wort mitten in „Stille“), dann gilt die Wortgrenze
+        # Pausen-Cut: beide Nachbarwörter bleiben stehen, zählen also ebenfalls als „außerhalb"
+        outside = [w for w in words if (is_gap or not (cut.start_word <= w.id <= cut.end_word)) and w.end > w.start]
+        s = max([s] + [w.end for w in outside if s < w.end <= ws])
+        e = min([e] + [w.start for w in outside if we <= w.start < e])
         if e <= s:
             continue
         spans.append(_Span(cut, s, e, None if is_gap else ws, None if is_gap else we))
@@ -279,7 +291,8 @@ def fuse(
     spans = [p for sp in spans for p in _split_at_scenes(sp, scenes)]  # Regel 3
     spans = [_pad(sp) for sp in spans]                                  # Regel 4
     spans = [_clamp_to_kept_words(sp, words, removed_ids) for sp in spans]
-    spans = _merge_close(spans, duration, scenes)                       # Regel 5 und 6
+    kept_words = [w for w in words if w.id not in removed_ids and w.end > w.start]
+    spans = _merge_close(spans, duration, scenes, kept_words)           # Regel 5 und 6
     spans = [_clamp_to_kept_words(sp, words, removed_ids) for sp in spans]
     blocking = _blocking(events)
     if blocking:                                                        # Regel 8

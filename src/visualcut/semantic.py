@@ -16,7 +16,7 @@ from .cache import ProgressFn, ProjectCache, emit
 from .fusion import REASON_PRIORITY
 from .ingest import StageError
 from .schema import (
-    Chapter, Cut, CutSource, Event, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage,
+    Chapter, Cut, CutReason, CutSource, Event, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage,
     Word,
 )
 
@@ -121,8 +121,17 @@ def validate(resp: LLMResponse, block: list[Word], log: ProgressFn | None = None
 # ---------------------------------------------------------------- Zusammenführen
 
 
+def _removed_range(c: Cut) -> tuple[int, int]:
+    """Wörter, die der Cut wirklich entfernt. Ein Pausen-Cut zwischen zwei Wörtern entfernt keines, er
+    berührt seine Nachbarwörter nur; sonst würde er beim Zusammenführen ein behaltenes Wort mitnehmen."""
+    if c.reason == CutReason.long_pause and c.start_word != c.end_word:
+        return c.start_word + 1, c.end_word - 1
+    return c.start_word, c.end_word
+
+
 def _overlaps(a: Cut, b: Cut) -> bool:
-    return a.start_word <= b.end_word and b.start_word <= a.end_word
+    (a0, a1), (b0, b1) = _removed_range(a), _removed_range(b)
+    return a0 <= a1 and b0 <= b1 and a0 <= b1 and b0 <= a1
 
 
 def _merge(a: Cut, b: Cut) -> Cut:

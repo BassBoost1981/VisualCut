@@ -111,3 +111,37 @@ def test_min_segment_at_start_extends_to_zero():
 def test_invalid_word_ids_are_dropped():
     words = grid_words(5)
     assert fuse([make_cut("x", 3, 9)], words, [], [], FPS) == []
+
+
+def test_long_silence_keeps_at_most_quarter_second():
+    sil = [SilenceInterval(start=0.0, end=41.0)]
+    assert snap_start(41.2, sil) == 0.25  # nicht die Mitte (20,5 s)
+    assert snap_end(9.9, [SilenceInterval(start=10.0, end=30.0)]) == 29.75
+
+
+def test_short_rest_with_kept_words_is_not_swallowed():
+    # Retake-Rest „Natürlich nicht.“ ist laut Alignment nur 0,32 s lang, muss aber bleiben
+    words = [Word(id=0, text="a", start=0.5, end=1.0), Word(id=1, text="b", start=1.02, end=1.2),
+             Word(id=2, text="c", start=1.22, end=1.34), Word(id=3, text="d", start=1.36, end=1.6),
+             Word(id=4, text="e", start=2.5, end=3.0)]
+    cuts = fuse([make_cut("a", 0, 0, CutReason.redundant), make_cut("b", 3, 3, CutReason.redundant)],
+                words, [], [], FPS, duration=4.0)
+    assert len(cuts) == 2
+    assert_no_boundary_in_kept_word(cuts, words)
+    assert all(not (c.start <= words[1].start and words[2].end <= c.end) for c in cuts)
+
+
+def test_snapping_never_swallows_a_kept_word_inside_silence():
+    # Alignment setzt „nicht.“ (Wort 1) in eine erkannte Stille; der Cut von Wort 2 darf es nicht mitnehmen
+    words = [Word(id=0, text="Natürlich", start=252.42, end=252.60), Word(id=1, text="nicht.", start=252.62, end=252.74),
+             Word(id=2, text="So.", start=254.21, end=254.50), Word(id=3, text="Ah", start=256.0, end=256.4)]
+    sil = [SilenceInterval(start=252.37, end=254.20)]
+    cuts = fuse([make_cut("so", 2, 2, CutReason.redundant)], words, sil, [], FPS, duration=258.0)
+    assert len(cuts) == 1 and cuts[0].start >= words[1].end
+
+
+def test_pause_cut_does_not_snap_over_its_neighbour_word():
+    words = [Word(id=0, text="nicht.", start=252.62, end=252.74), Word(id=1, text="So.", start=254.21, end=254.5)]
+    sil = [SilenceInterval(start=252.37, end=254.20)]
+    cuts = fuse([make_cut("p", 0, 1, CutReason.long_pause, 0.8)], words, sil, [], FPS, duration=258.0)
+    assert len(cuts) == 1 and cuts[0].start >= words[0].end and cuts[0].end <= words[1].start
