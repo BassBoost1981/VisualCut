@@ -1,21 +1,20 @@
-import { Alert, Button, Card, Checkbox, Chip, Description, Input, Label, Radio, RadioGroup, Spinner } from "@heroui/react";
+import { Alert, Button, Card, Checkbox, Chip, Description, Input, Label, Radio, RadioGroup, Spinner, Switch } from "@heroui/react";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, type ExportResult } from "../api/client";
+import type { ExportResult } from "../api/client";
+import { startExport, type Format } from "../api/exportRequest";
 import { useCuts, useProject } from "../api/queries";
 import type { CutReason } from "../api/types";
 import { basename, dirname, fmtDuration, fmtPercent } from "../lib/format";
 import { REASON_COLOR, REASON_LABEL } from "../lib/reasons";
 import { navigate } from "../lib/router";
 
-type Format = "fcpxml" | "markers-edl" | "otio" | "edl" | "preview";
-
 const FORMATS: { id: Format; title: string; hint: string; tag?: string }[] = [
   { id: "fcpxml", title: "FCPXML", hint: "DaVinci Resolve Import: Timeline mit Clipnamen. Marker übernimmt Resolve hieraus nicht.", tag: "Empfohlen" },
   { id: "markers-edl", title: "Marker-EDL (Resolve)", hint: "Die offenen Cuts als farbige Timeline-Marker, zusätzlich zur FCPXML importieren.", tag: "Resolve" },
   { id: "otio", title: "OpenTimelineIO", hint: "Kanonisches Format. Für Pipelines, Agenten und andere Werkzeuge." },
   { id: "edl", title: "EDL (CMX 3600)", hint: "Fallback für jedes Schnittprogramm. Keine Marker, keine Namen." },
-  { id: "preview", title: "Vorschau-Render (MP4)", hint: "ffmpeg schneidet den Proxy direkt. Zum Gegenhören, kein Ersatz für Resolve." },
+  { id: "preview", title: "Vorschau-Render (MP4)", hint: "ffmpeg schneidet den Proxy (oder das Original) direkt. Zum Gegenhören, kein Ersatz für Resolve." },
 ];
 
 export function Export({ hash }: { hash: string }) {
@@ -23,6 +22,7 @@ export function Export({ hash }: { hash: string }) {
   const cuts = useCuts(hash);
   const [format, setFormat] = useState<Format>("fcpxml");
   const [openAsCut, setOpenAsCut] = useState(false);
+  const [fromOriginal, setFromOriginal] = useState(false);
   const [out, setOut] = useState("");
   const [result, setResult] = useState<ExportResult | { path: string } | null>(null);
 
@@ -43,11 +43,7 @@ export function Export({ hash }: { hash: string }) {
   }, [cuts.data, openAsCut]);
 
   const run = useMutation({
-    mutationFn: async () => {
-      const target = out.trim() || defaultOut;
-      if (format === "preview") return api.renderPreview(hash, { out: target, open_as_cut: openAsCut });
-      return api.exportProject(hash, { format, out: target, open_as_cut: openAsCut });
-    },
+    mutationFn: () => startExport(hash, format, out.trim() || defaultOut, { openAsCut, original: fromOriginal }),
     onSuccess: (r) => setResult(r),
   });
 
@@ -131,6 +127,23 @@ export function Export({ hash }: { hash: string }) {
                   </div>
                 </Checkbox.Content>
               </Checkbox>
+              {format === "preview" && (
+                <Switch isSelected={fromOriginal} onChange={setFromOriginal}>
+                  <Switch.Content>
+                    <Switch.Control>
+                      <Switch.Thumb />
+                    </Switch.Control>
+                    <div className="flex flex-col">
+                      <Label className="font-semibold">Aus dem Original rendern (volle Auflösung)</Label>
+                      <Description className="text-xs text-text-muted">
+                        {fromOriginal
+                          ? "Volle Auflösung und Bildqualität der Originaldatei. Dauert deutlich länger als der Proxy-Render, bei langen 4K-Videos mehrere Minuten."
+                          : "Aus: schneller Render vom 720p-Proxy, reicht zum Gegenhören und Prüfen der Schnitte."}
+                      </Description>
+                    </div>
+                  </Switch.Content>
+                </Switch>
+              )}
               <div className="flex flex-col gap-1">
                 <Label>Zieldatei</Label>
                 <Input

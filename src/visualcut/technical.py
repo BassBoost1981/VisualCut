@@ -32,14 +32,26 @@ def detect_silence(audio: Path, duration: float, threshold_db: float = SILENCE_D
 def detect_scenes(proxy: Path, fps: float) -> list[SceneChange]:
     from scenedetect import AdaptiveDetector, ContentDetector, SceneManager, open_video
 
+    # Ein Dekodierdurchlauf für beide Detektoren. Der SceneManager führt die Schnitte zusammen,
+    # darum zeichnen wir pro Detektor mit, welche Schnittframes er meldet.
     found: dict[int, set[str]] = {}
+
+    def record(name: str, fn):
+        def wrapped(*args):
+            cuts = fn(*args)
+            for cut in cuts:
+                found.setdefault(cut.frame_num, set()).add(name)
+            return cuts
+
+        return wrapped
+
+    sm = SceneManager()
     for name, det in (("content", ContentDetector(threshold=27.0)), ("adaptive", AdaptiveDetector())):
-        video = open_video(str(proxy))
-        sm = SceneManager()
+        det.process_frame = record(name, det.process_frame)
+        det.post_process = record(name, det.post_process)
         sm.add_detector(det)
-        sm.detect_scenes(video)
-        for start, _end in sm.get_scene_list()[1:]:  # Szenenstart = Schnittframe, erste Szene beginnt bei 0
-            found.setdefault(start.frame_num, set()).add(name)
+    sm.detect_scenes(open_video(str(proxy)))
+    found.pop(0, None)  # Schnitt auf Frame 0 ist kein Szenenwechsel (erste Szene beginnt dort)
     return [
         SceneChange(frame=f, time=f / fps, detector="+".join(sorted(names)))
         for f, names in sorted(found.items())
