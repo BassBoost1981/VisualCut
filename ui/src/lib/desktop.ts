@@ -26,6 +26,18 @@ export async function pickVideo(): Promise<string | null> {
   return api ? api.pick_video() : null;
 }
 
+/** Desktop-App: der Python-Drop-Handler meldet den vollen Pfad der abgelegten Datei (desktop.watch_drops). */
+export function useDroppedFile(onPath: (path: string) => void): void {
+  useEffect(() => {
+    const on = (e: Event) => {
+      const path = (e as CustomEvent<string>).detail;
+      if (path) onPath(path);
+    };
+    window.addEventListener("visualcut:dropped", on);
+    return () => window.removeEventListener("visualcut:dropped", on);
+  }, [onPath]);
+}
+
 /** Vollständiger Pfad einer abgelegten Datei: pywebview setzt `pywebviewFullPath`, Electron `path`. */
 export function droppedPath(file: File): string | null {
   const f = file as File & { pywebviewFullPath?: string; path?: string };

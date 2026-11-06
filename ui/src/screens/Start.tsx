@@ -1,10 +1,10 @@
 import { Alert, Button, Card, Chip, Input, Spinner } from "@heroui/react";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { api, type ProjectSummary } from "../api/client";
 import { useProjects } from "../api/queries";
 import { basename, fmtDuration } from "../lib/format";
-import { droppedPath, pickVideo, useDesktop } from "../lib/desktop";
+import { droppedPath, pickVideo, useDesktop, useDroppedFile } from "../lib/desktop";
 import { href, navigate } from "../lib/router";
 import { LANGUAGES, useSettings, WHISPER_MODELS } from "../lib/settings";
 
@@ -15,6 +15,11 @@ export function Start() {
   const [dragging, setDragging] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const desktop = useDesktop();
+  const onDroppedPath = useCallback((p: string) => {
+    setPath(p);
+    setHint(null);
+  }, []);
+  useDroppedFile(onDroppedPath);
 
   const start = useMutation({
     mutationFn: (p: string) =>
@@ -34,6 +39,9 @@ export function Start() {
     const full = droppedPath(file);
     if (full) {
       setPath(full);
+      setHint(null);
+    } else if (desktop) {
+      // Desktop-App: den vollen Pfad liefert gleich der Python-Drop-Handler (useDroppedFile oben)
       setHint(null);
     } else {
       setPath((p) => (p.trim() ? p : file.name));

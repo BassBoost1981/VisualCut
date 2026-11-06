@@ -113,6 +113,28 @@ class Bridge:
         return result[0] if isinstance(result, (list, tuple)) else str(result)
 
 
+DROP_EVENT = "visualcut:dropped"
+
+
+def watch_drops(window) -> None:
+    """Den vollen Pfad abgelegter Dateien liefert WebView2 nur an einen Python-Drop-Handler
+    (`pywebviewFullPath`). Er wird als Browser-Ereignis an die UI weitergereicht."""
+    import json
+
+    from webview.dom import DOMEventHandler
+
+    def on_drop(event: dict) -> None:
+        files = (event.get("dataTransfer") or {}).get("files") or []
+        path = next((f.get("pywebviewFullPath") for f in files if f.get("pywebviewFullPath")), None)
+        if path:
+            window.evaluate_js(f"window.dispatchEvent(new CustomEvent({json.dumps(DROP_EVENT)}, {{detail: {json.dumps(path)}}}))")
+
+    def on_loaded() -> None:
+        window.dom.document.events.drop += DOMEventHandler(on_drop)
+
+    window.events.loaded += on_loaded
+
+
 def main() -> None:
     prepare_environment()
     import webview
@@ -125,6 +147,7 @@ def main() -> None:
         width=1440, height=900, min_size=(1024, 700), background_color="#09090b",
     )
     bridge._window = window
+    watch_drops(window)
     try:
         webview.start(gui="edgechromium", private_mode=False, storage_path=str(data_dir() / "webview"))
     finally:
