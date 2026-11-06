@@ -1,6 +1,6 @@
 /** Typisierter Client für `visualcut serve`. Kernmodelle kommen aus types.ts (generiert), die
  *  API-Hüllen (ProjectSummary, JobInfo, …) sind hier nachgebildet, weil sie nicht im Schema stehen. */
-import type { Analysis, Cut, CutStatus, Decisions, EventCatalog, ProgressEvent, Stage } from "./types";
+import type { Analysis, Cut, CutReason, CutStatus, Decisions, EventCatalog, ManualCuts, ProgressEvent, Stage } from "./types";
 
 export interface ProjectSummary {
   content_hash: string;
@@ -32,6 +32,14 @@ export interface CutList {
   fps: number;
   count: number;
   cuts: Cut[];
+}
+
+/** POST /projects/{hash}/manual: Wortspanne als manuellen Cut speichern. */
+export interface ManualCutRequest {
+  start_word: number;
+  end_word: number;
+  reason?: CutReason;
+  note?: string;
 }
 
 export interface ExportRequest {
@@ -110,6 +118,10 @@ export const api = {
   getDecisions: (hash: string) => request<Decisions>(`/projects/${hash}/decisions`),
   putDecision: (hash: string, cutId: string, status: CutStatus, note = "") =>
     request<Decisions>(`/projects/${hash}/decisions/${cutId}`, { method: "PUT", ...json({ status, note }) }),
+  addManualCut: (hash: string, body: ManualCutRequest) =>
+    request<Cut>(`/projects/${hash}/manual`, { method: "POST", ...json(body) }),
+  deleteManualCut: (hash: string, cutId: string) =>
+    request<ManualCuts>(`/projects/${hash}/manual/${cutId}`, { method: "DELETE" }),
   exportProject: (hash: string, body: ExportRequest) =>
     request<ExportResult>(`/projects/${hash}/export`, { method: "POST", ...json(body) }),
   renderPreview: (hash: string, body: RenderRequest) =>

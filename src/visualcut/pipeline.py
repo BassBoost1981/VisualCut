@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import decisions as decisions_mod
+from . import manual as manual_mod
 from .cache import ProgressFn, ProjectCache, emit
 from .fusion import align_highlights, fuse
 from .ingest import ingest
 from .ingest import StageError
 from .schema import (
-    STAGE_ORDER, Analysis, Cut, CutStatus, Event, EventJudgments, EventsResult, EventStatus, FusionResult, MediaInfo,
+    STAGE_ORDER, Analysis, Cut, CutReason, CutStatus, Event, EventJudgments, EventsResult, EventStatus, FusionResult, MediaInfo,
     SemanticResult, SemanticSubmission, SpeechResult, Stage, TechnicalResult,
 )
 from .semantic import DEFAULT_MODEL, analyze_semantic, fingerprint, format_block, merge_with_rules, submit
@@ -91,15 +92,20 @@ def run_fusion(
     llm_model = semantic.model if semantic is not None else None
     fp = fingerprint(semantic)
     efp = events_fingerprint(events or [])
+    manual = manual_mod.load(cache)
+    mfp = manual_mod.fingerprint(manual)
     if cache.has(stage) and not force:
         cached = cache.load(stage, FusionResult)
-        if cached.llm_model == llm_model and cached.semantic_fingerprint == fp and cached.events_fingerprint == efp:
+        if cached.llm_model == llm_model and cached.semantic_fingerprint == fp and cached.events_fingerprint == efp \
+                and cached.manual_fingerprint == mfp:
             emit(progress, "stage_skipped", stage, "Cache vorhanden")
             return cached
-        emit(progress, "log", stage, "LLM-Cuts oder Events haben sich geändert, Fusion wird neu gerechnet")
+        emit(progress, "log", stage, "LLM-Cuts, Events oder manuelle Cuts haben sich geändert, Fusion wird neu gerechnet")
     emit(progress, "stage_start", stage)
     rules = rule_cuts(speech.words, speech.language)
     raw = merge_with_rules(semantic.cuts, rules) if semantic is not None else rules
+    if manual.cuts:  # manuelle Cuts führen bei Überlappung (fusion.merge_rank)
+        raw = merge_with_rules(manual.cuts, raw)
     emit(progress, "progress", stage,
          f"{len(rules)} Regel-Kandidaten, {len(semantic.cuts) if semantic else 0} LLM-Kandidaten", 30)
     # Nur harte Szenenwechsel (ContentDetector) zählen in der Fusion. Reine AdaptiveDetector-Treffer
@@ -108,7 +114,7 @@ def run_fusion(
     cuts = fuse(raw, speech.words, technical.silences, hard_scenes, media.fps, media.duration, events=events)
     highlights = align_highlights(semantic.highlights, speech.words, events, media.fps, media.duration) if semantic else []
     result = FusionResult(cuts=cuts, highlights=highlights, fps=media.fps, llm_model=llm_model,
-                          semantic_fingerprint=fp, events_fingerprint=efp)
+                          semantic_fingerprint=fp, events_fingerprint=efp, manual_fingerprint=mfp)
     cache.save(stage, result)
     emit(progress, "stage_done", stage, f"{len(cuts)} Cuts")
     return result
@@ -215,6 +221,36 @@ def submit_semantic(
     info = summary(refreshed, cache)
     info["rejected"] = semantic.rejected
     return info
+
+
+def _refuse(cache: ProjectCache, progress: ProgressFn | None) -> Analysis:
+    """Stufe 4 mit dem aktuellen Cache neu rechnen und analysis.json schreiben."""
+    a = load_analysis(cache)
+    assert a is not None and a.speech is not None and a.technical is not None
+    run_fusion(cache, a.media, a.technical, a.speech, a.semantic, progress, events=a.events)
+    refreshed = load_analysis(cache)
+    assert refreshed is not None
+    cache.path("analysis.json").write_text(refreshed.model_dump_json(indent=2), encoding="utf-8")
+    return refreshed
+
+
+def mark(cache: ProjectCache, start_word: int, end_word: int, reason: CutReason = CutReason.redundant,
+         note: str = "", progress: ProgressFn | None = None) -> tuple[Cut, Analysis]:
+    """Manuellen Cut auf einer Wortspanne speichern (manual.json) und die Fusion neu rechnen.
+    Gibt den eingereichten Cut und die neue Analyse zurück. CLI `mark`, API `POST /manual`."""
+    analysis = load_analysis(cache)
+    if analysis is None or analysis.speech is None or Stage.fusion not in analysis.stages_done:
+        raise StageError("Keine fertige Analyse im Cache, zuerst: visualcut analyze")
+    cut = manual_mod.add(cache, analysis.speech.words, start_word, end_word, reason, note)
+    return cut, _refuse(cache, progress)
+
+
+def unmark(cache: ProjectCache, cut_id: str, progress: ProgressFn | None = None) -> tuple[Cut, Analysis]:
+    """Manuellen Cut löschen (auch über die ID eines an Szenen geteilten Teils) und die Fusion neu rechnen."""
+    if load_analysis(cache) is None:
+        raise StageError("Keine fertige Analyse im Cache, zuerst: visualcut analyze")
+    cut = manual_mod.remove(cache, cut_id)
+    return cut, _refuse(cache, progress)
 
 
 def events_info(cache: ProjectCache, analysis: Analysis, pending: bool = False) -> dict:

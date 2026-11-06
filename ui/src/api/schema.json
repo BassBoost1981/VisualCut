@@ -758,6 +758,33 @@
       "title": "Highlight",
       "type": "object"
     },
+    "ManualCuts": {
+      "description": "manual.json: Cuts, die der Mensch im Transkript markiert hat (source=manual, nur Wort-IDs).",
+      "properties": {
+        "schema_version": {
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "content_hash": {
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "cuts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Cut"
+          },
+          "title": "Cuts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "content_hash"
+      ],
+      "title": "ManualCuts",
+      "type": "object"
+    },
     "MediaInfo": {
       "description": "Stufe 0: ffprobe-Metadaten des Originals.",
       "properties": {
@@ -1209,6 +1236,9 @@
     },
     {
       "$ref": "#/$defs/EventJudgments"
+    },
+    {
+      "$ref": "#/$defs/ManualCuts"
     }
   ]
 }

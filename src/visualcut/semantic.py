@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 from .cache import ProgressFn, ProjectCache, emit
-from .fusion import REASON_PRIORITY
+from .fusion import merge_rank
 from .ingest import StageError
 from .schema import (
     Chapter, Cut, CutReason, CutSource, Event, Flag, Highlight, LLMResponse, SemanticResult, SemanticSubmission, SpeechResult, Stage,
@@ -136,8 +136,7 @@ def _overlaps(a: Cut, b: Cut) -> bool:
 
 def _merge(a: Cut, b: Cut) -> Cut:
     """Vereinigung zweier überlappender Cuts; Grund, Konfidenz, Quelle und ID vom führenden Cut."""
-    pa, pb = REASON_PRIORITY.get(a.reason, 0), REASON_PRIORITY.get(b.reason, 0)
-    lead, other = (a, b) if (pa, a.confidence) >= (pb, b.confidence) else (b, a)
+    lead, other = (a, b) if merge_rank(a) >= merge_rank(b) else (b, a)
     tail = f"zusammengeführt mit {other.id}" + (f": {other.note}" if other.note and other.note != lead.note else "")
     note = f"{lead.note} | {tail}".strip(" |")
     return lead.model_copy(update={

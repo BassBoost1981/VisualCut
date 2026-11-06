@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type CutList } from "./client";
+import { api, type CutList, type ManualCutRequest } from "./client";
 import type { CutStatus, EventCatalog } from "./types";
 
 export const keys = {
@@ -52,3 +52,22 @@ export function useDecide(hash: string) {
     },
   });
 }
+
+/** Manuelle Cuts anlegen und löschen. Das Backend rechnet die Fusion neu, darum Cuts und Projekt neu laden. */
+function useManualMutation<V, R>(hash: string, fn: (v: V) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.cuts(hash) });
+      void qc.invalidateQueries({ queryKey: keys.project(hash) });
+      void qc.invalidateQueries({ queryKey: keys.projects });
+    },
+  });
+}
+
+export const useMarkCut = (hash: string) =>
+  useManualMutation(hash, (body: ManualCutRequest) => api.addManualCut(hash, body));
+
+export const useUnmarkCut = (hash: string) =>
+  useManualMutation(hash, (cutId: string) => api.deleteManualCut(hash, cutId));

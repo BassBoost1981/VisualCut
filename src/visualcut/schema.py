@@ -360,6 +360,15 @@ class FusionResult(BaseModel):
     llm_model: str | None = Field(default=None, description="Modell der LLM-Cuts, die eingeflossen sind, sonst null")
     semantic_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen Stufe-3-Cuts, für den Cache")
     events_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen Events, für den Cache")
+    manual_fingerprint: str | None = Field(default=None, description="Hash der eingeflossenen manuellen Cuts, für den Cache")
+
+
+class ManualCuts(BaseModel):
+    """manual.json: Cuts, die der Mensch im Transkript markiert hat (source=manual, nur Wort-IDs)."""
+
+    schema_version: int = SCHEMA_VERSION
+    content_hash: str
+    cuts: list[Cut] = []
 
 
 class Analysis(BaseModel):
@@ -407,5 +416,5 @@ def json_schema() -> dict[str, Any]:
     """JSON-Schema aller Ausgabeobjekte unter einem gemeinsamen $defs-Dach."""
     from pydantic import TypeAdapter
 
-    adapter = TypeAdapter(Analysis | Decisions | ProgressEvent | Cut | EventCatalog | EventsResult | EventJudgments)
+    adapter = TypeAdapter(Analysis | Decisions | ProgressEvent | Cut | EventCatalog | EventsResult | EventJudgments | ManualCuts)
     return adapter.json_schema()
