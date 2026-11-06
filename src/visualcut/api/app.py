@@ -32,6 +32,17 @@ def ui_dist() -> Path | None:
     return None
 
 
+class UIFiles(StaticFiles):
+    """Gebaute UI. index.html nie zwischenspeichern, sonst lädt das Fenster (WebView2-Cache in data/webview)
+    nach einem Update die alte Oberfläche; die Assets haben pro Build eindeutige Namen."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.media_type == "text/html" or path in ("", ".", "index.html"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="VisualCut", version=__version__)
     app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["*"], allow_headers=["*"])
@@ -49,7 +60,7 @@ def create_app() -> FastAPI:
 
     dist = ui_dist()
     if dist is not None:  # zuletzt, damit die API-Routen Vorrang haben
-        app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
+        app.mount("/", UIFiles(directory=dist, html=True), name="ui")
     return app
 
 

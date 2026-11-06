@@ -113,6 +113,14 @@ class Bridge:
         return result[0] if isinstance(result, (list, tuple)) else str(result)
 
 
+def ui_build_id() -> str:
+    """Kennung des UI-Builds für die Start-URL: ein neuer Build umgeht so eine alte, zwischengespeicherte Startseite."""
+    from .api.app import ui_dist
+
+    dist = ui_dist()
+    return str(int((dist / "index.html").stat().st_mtime)) if dist else "dev"
+
+
 DROP_EVENT = "visualcut:dropped"
 
 
@@ -126,6 +134,7 @@ def watch_drops(window) -> None:
     def on_drop(event: dict) -> None:
         files = (event.get("dataTransfer") or {}).get("files") or []
         path = next((f.get("pywebviewFullPath") for f in files if f.get("pywebviewFullPath")), None)
+        print(f"[drop] {path or 'kein Pfad'}", file=sys.stderr, flush=True)
         if path:
             window.evaluate_js(f"window.dispatchEvent(new CustomEvent({json.dumps(DROP_EVENT)}, {{detail: {json.dumps(path)}}}))")
 
@@ -143,7 +152,7 @@ def main() -> None:
     server, thread = start_backend(port)
     bridge = Bridge()
     window = webview.create_window(
-        APP_NAME, f"http://127.0.0.1:{port}/", js_api=bridge,
+        APP_NAME, f"http://127.0.0.1:{port}/?ui={ui_build_id()}", js_api=bridge,
         width=1440, height=900, min_size=(1024, 700), background_color="#09090b",
     )
     bridge._window = window

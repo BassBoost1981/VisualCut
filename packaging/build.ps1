@@ -13,9 +13,6 @@ npm ci --no-audit --no-fund
 npm run build
 Pop-Location
 
-Write-Host "3/4 Icon"
-uv run python packaging\make_icon.py
-
 Write-Host "4/5 PyInstaller"
 # PyInstaller löscht dist\VisualCut komplett; Modelle und Analysen in data\ vorher beiseitelegen
 $data = "dist\VisualCut\data"; $keep = "build\data-keep"

@@ -17,10 +17,7 @@ export function Shell({ route, children }: { route: Route; children: React.React
     <div className="flex min-h-full flex-col">
       <header className="flex h-14 items-center gap-8 border-b border-line bg-panel-dark px-6">
         <div className="flex items-center gap-2.5 text-base font-bold tracking-tight">
-          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#338EF7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="5" width="18" height="14" rx="3" />
-            <path d="M8 5v14M16 5v14M3 12h18" />
-          </svg>
+          <img src="/logo.png" alt="" aria-hidden="true" width="26" height="26" />
           VisualCut
         </div>
         <nav aria-label="Hauptnavigation" className="flex gap-1">

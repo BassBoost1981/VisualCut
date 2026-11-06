@@ -59,7 +59,7 @@ exe = EXE(
     pyz, a.scripts, [],
     exclude_binaries=True,
     name="VisualCut",
-    icon=str(ROOT / "packaging" / "visualcut.ico"),
+    icon=str(ROOT / "design" / "visualcut-v-transparent.ico"),
     console=False,
     upx=False,
 )
