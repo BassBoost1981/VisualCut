@@ -94,6 +94,9 @@ def _transcribe_segments(audio: Path, language: str, model_size: str, progress: 
             seg_iter, _info = model.transcribe(
                 _load_wav(audio), language=language, vad_filter=True, word_timestamps=True, beam_size=5,
                 vad_parameters={"min_silence_duration_ms": 300},
+                # Ohne Kontext aus dem vorigen Segment glättet large-v3 Verlegenheitslaute nicht weg:
+                # deutsches Referenzvideo 6 statt 0 „ähm" bei gleichem Inhalt (501 statt 496 Wörter)
+                condition_on_previous_text=False,
             )
             segments = []
             for seg in seg_iter:
