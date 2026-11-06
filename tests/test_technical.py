@@ -32,6 +32,30 @@ def test_scene_cuts_within_one_frame(analyzed: ProjectCache):
     assert all(s.detector == "adaptive+content" for s in tech.scenes)
 
 
+def test_scene_detection_decodes_once(analyzed: ProjectCache, monkeypatch):
+    """Beide Detektoren laufen im selben Dekodierdurchlauf, die Zuordnung pro Detektor bleibt."""
+    from pathlib import Path
+
+    import scenedetect
+
+    from visualcut.technical import detect_scenes
+
+    opened: list[str] = []
+    real_open = scenedetect.open_video
+
+    def counting_open(path, *args, **kwargs):
+        opened.append(path)
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(scenedetect, "open_video", counting_open)
+    media = analyzed.load(Stage.ingest, MediaInfo)
+    scenes = detect_scenes(Path(media.proxy_path), media.fps)
+    assert len(opened) == 1
+    assert [s.detector for s in scenes] == ["adaptive+content"] * len(SCENE_CUT_FRAMES)
+    for expected, got in zip(SCENE_CUT_FRAMES, (s.frame for s in scenes)):
+        assert abs(expected - got) <= 1, (expected, got)
+
+
 def test_silences_detected(analyzed: ProjectCache):
     tech = analyzed.load(Stage.technical, TechnicalResult)
     assert len(tech.silences) == len(SILENCES)
