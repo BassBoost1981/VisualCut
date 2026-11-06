@@ -470,6 +470,17 @@ Diarisierung, Keyframes ans LLM, Highlight-Clips, Bewegungscheck, Review-Schleif
 
 Erfolg: Nach drei Feedback-Runden sinkt die Zahl der manuell verworfenen Cuts messbar.
 
+#### Umsetzungsplan Phase 5 (Stand 2026-11-06)
+
+Reihenfolge nach Nutzen pro Aufwand. Jeder Baustein ist für sich nützlich und hat eigene Tests.
+
+1. **Manuelle Cuts per Transkript-Markierung.** Im Review Wörter markieren (Klick, Shift-Klick), Grund wählen, als Cut mit `source=manual` speichern. Persistenz in `manual.json` im Cache-Ordner (getrennt von `decisions.json`, das nur Status hält); ein neuer manueller Cut ist sofort `accepted`. Die Fusion nimmt sie wie Regel- und LLM-Cuts auf und snappt sie gleich; bei Überlappung führt der manuelle Cut, und Regel 8 streicht ihn nicht (der Mensch hat es so gewollt). Löschen in der UI. CLI `visualcut mark`, API `POST`/`DELETE /projects/{hash}/manual`, `get_cuts` im MCP liefert sie mit. Voraussetzung für die Review-Schleife, weil zusätzliche Schnitte des Menschen dort ohnehin als `manual` auftauchen.
+2. **Review-Schleife: `visualcut diff` und `style.json`.** Finale Resolve-Timeline (FCPXML bzw. EDL) zurücklesen, gegen die Vorschläge abgleichen: angenommen, verworfen, zusätzlich geschnitten (als manuelle Cuts übernehmbar). Daraus pro Projekt und global ein Stilprofil mit Schwellen (Pausenlänge, Füllwort-Toleranz, Aggressivität pro Grund) und ein paar Beispielen, das in den Regeln und als Few-Shot-Kontext in `semantic_v3.md` wirkt. Das Erfolgskriterium von Phase 5 hängt hieran, messbar über die Verwerfungsquote je Runde.
+3. **Highlight-Clips als eigene Exporte.** Pro Highlight eine eigene Datei (ffmpeg-Render) bzw. eine eigene Timeline im FCPXML. CLI `visualcut export --format clips`, Knopf im Export-Screen. Klein, weil Highlights mit Sekunden schon in `analysis.json` stehen.
+4. **Sprechertrennung mit pyannote.** Neues Extra `diarize`, `speaker` pro Wort in `speech.json`, Sprecher-Spur in der UI, Sprecher als Kontext für Stufe 3. Braucht ein Hugging-Face-Token für das Gated-Modell und neue Abhängigkeiten, darum weiter hinten.
+5. **Kleinere Punkte aus dem Plan:** Keyframes ans LLM (Stufe 3 sieht ein Bild pro Kapitel), Bewegungscheck (Regel 7 in Stufe 4 steht noch aus).
+6. **Optional: Tauri-Hülle.** Vorerst nicht, die pywebview-Desktop-App deckt Pfad-Drop und natives Fenster schon ab (siehe Stand oben).
+
 ---
 
 ## 9. Risiken und Gegenmaßnahmen
